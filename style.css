@@ -341,6 +341,18 @@ body.light-mode .calendar-day.today {
     background: rgba(255, 255, 255, 0.4);
 }
 
+/* Light mode calendar header buttons */
+body.light-mode .calendar-header button {
+    background: rgba(0, 0, 0, 0.1);
+    color: #1c1c1e;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+body.light-mode .calendar-header button:hover {
+    background: rgba(0, 0, 0, 0.15);
+    border-color: rgba(0, 0, 0, 0.3);
+}
+
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -721,6 +733,29 @@ body.light-mode .close:hover {
 /* Adjust body padding for toolbar */
 body {
     padding-top: 60px;
+}
+
+/* Responsive: Remove mobile simulator on actual mobile devices */
+@media (max-width: 768px) {
+    body.mobile-simulator {
+        overflow: auto;
+        display: block;
+        height: auto;
+    }
+
+    body.mobile-simulator .container {
+        width: 100%;
+        height: auto;
+        max-height: none;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 1rem;
+    }
+
+    body.mobile-simulator .container::before {
+        display: none;
+    }
 }
 
 /* Mobile Simulator Mode */
