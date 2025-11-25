@@ -16,7 +16,18 @@
         <div class="blob blob-3"></div>
     </div>
 
-    <main class="glass-container">
+    <!-- Top Toolbar -->
+    <nav id="top-toolbar">
+        <div class="toolbar-content">
+            <button id="btn-mode-desktop" class="toolbar-btn active">Desktop</button>
+            <button id="btn-mode-mobile" class="toolbar-btn">Mobile</button>
+        </div>
+        <div class="toolbar-content" style="margin-left: 10px;">
+            <button id="btn-theme-toggle" class="toolbar-btn">🌙 Dark</button>
+        </div>
+    </nav>
+
+    <div class="container">
         <header>
             <div class="header-content">
                 <h1>📅 AI 캘린더 비서</h1>
@@ -24,16 +35,14 @@
                     <span class="icon">🔄</span> 동기화
                 </button>
             </div>
-            <p>자연어로 일정을 관리하세요.</p>
         </header>
 
         <!-- Input Section -->
         <section class="input-section">
             <div class="input-wrapper">
-                <input type="color" id="event-color" value="#3b82f6" title="일정 색상 선택"
-                    style="visibility: hidden; position: absolute;">
-                <textarea id="input-text" placeholder="예: 12/25~12/31 연말 휴가 (색상 선택 가능)"></textarea>
-                <button id="btn-quick-add" class="btn-icon" title="일정 추가">➕</button>
+                <input type="color" id="event-color" value="#3b82f6" title="일정 색상 선택">
+                <textarea id="input-text" placeholder="일정을 입력하세요..."></textarea>
+                <button id="btn-quick-add" class="btn-icon" title="추가">➕</button>
             </div>
             <div id="color-palette" class="color-palette"></div>
             <div id="parsing-feedback" class="parsing-feedback"></div>
@@ -50,56 +59,84 @@
                 <!-- Days will be generated here -->
             </div>
         </section>
-    </main>
+        </main>
 
-    <!-- Event Modal -->
-    <div id="event-modal" class="modal hidden">
-        <div class="modal-content glass-container">
-            <span id="close-modal" class="close">&times;</span>
-            <h2 id="modal-title">일정 상세</h2>
+        <!-- Event Modal -->
+        <div id="event-modal" class="modal hidden">
+            <div class="modal-content glass-container">
+                <span id="close-modal" class="close">&times;</span>
+                <h2 id="modal-title">일정 상세</h2>
 
-            <div class="form-group">
-                <label>제목</label>
-                <input type="text" id="edit-title">
-            </div>
-
-            <div class="form-group">
-                <label>일시</label>
-                <div class="date-range-inputs">
-                    <input type="datetime-local" id="edit-start">
-                    <span>~</span>
-                    <input type="datetime-local" id="edit-end">
+                <div class="form-group">
+                    <label>제목</label>
+                    <input type="text" id="edit-title">
                 </div>
-            </div>
 
-            <div class="form-group">
-                <label>색상</label>
-                <div class="color-picker-wrapper">
-                    <input type="color" id="edit-color" style="visibility: hidden; position: absolute;">
-                    <span id="color-preview-text" style="display:none;"></span>
-                    <div id="modal-color-palette" class="color-palette" style="margin-left: 0;"></div>
+                <div class="form-group">
+                    <label>일시</label>
+                    <div class="date-range-inputs">
+                        <input type="datetime-local" id="edit-start">
+                        <span>~</span>
+                        <input type="datetime-local" id="edit-end">
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <label>설명</label>
-                <textarea id="edit-desc"></textarea>
-            </div>
+                <div class="form-group">
+                    <label>색상</label>
+                    <div class="color-picker-wrapper">
+                        <input type="color" id="edit-color" style="visibility: hidden; position: absolute;">
+                        <span id="color-preview-text" style="display:none;"></span>
+                        <div id="modal-color-palette" class="color-palette" style="margin-left: 0;"></div>
+                    </div>
+                </div>
 
-            <div class="modal-actions">
-                <a id="modal-btn-google" href="#" target="_blank" class="btn btn-primary">
-                    <span class="icon">🗓️</span> 구글 캘린더 등록
-                </a>
-                <button id="modal-btn-save" class="btn btn-success">저장</button>
-                <button id="modal-btn-delete" class="btn btn-danger">삭제</button>
+                <div class="form-group">
+                    <label>설명</label>
+                    <textarea id="edit-desc"></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button id="modal-btn-cancel" class="btn btn-secondary">취소</button>
+                    <button id="modal-btn-save" class="btn btn-success">저장</button>
+                    <button id="modal-btn-delete" class="btn btn-danger">삭제</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Scripts -->
-    <script src="app.js"></script>
-    <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
-    <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
+        <!-- Device Selection Modal -->
+        <div id="device-modal" class="modal hidden">
+            <div class="modal-content device-modal-content">
+                <h2>기기 선택</h2>
+                <p>사용 중인 기기를 선택해주세요.</p>
+                <div class="device-list">
+                    <button class="device-btn" data-device="iphone-16-pro">
+                        <span class="device-icon">📱</span>
+                        <span class="device-name">iPhone 16 Pro</span>
+                    </button>
+                    <!-- Add more devices later -->
+                </div>
+                <button id="close-device-modal" class="btn-text">닫기</button>
+            </div>
+        </div>
+
+        <!-- Day Detail Modal -->
+        <div id="day-detail-modal" class="modal hidden">
+            <div class="modal-content day-detail-content">
+                <span id="close-day-detail" class="close">&times;</span>
+                <h2 id="day-detail-date"></h2>
+                <div id="day-detail-list" class="day-detail-list">
+                    <!-- Events will be populated here -->
+                </div>
+                <div class="modal-actions">
+                    <button id="btn-add-on-detail" class="btn btn-primary">➕ 일정 추가</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scripts -->
+        <script src="app.js"></script>
+        <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
+        <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
 </body>
 
 </html>

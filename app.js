@@ -10,6 +10,14 @@ const prevMonthBtn = document.getElementById('prev-month');
 const nextMonthBtn = document.getElementById('next-month');
 const btnOpenSync = document.getElementById('btn-open-sync');
 
+// Mode Toggle Elements
+const btnModeDesktop = document.getElementById('btn-mode-desktop');
+const btnModeMobile = document.getElementById('btn-mode-mobile');
+const btnThemeToggle = document.getElementById('btn-theme-toggle');
+const deviceModal = document.getElementById('device-modal');
+const closeDeviceModal = document.getElementById('close-device-modal');
+const deviceBtns = document.querySelectorAll('.device-btn');
+
 // Modal Elements
 const modal = document.getElementById('event-modal');
 const closeModal = document.getElementById('close-modal');
@@ -20,8 +28,8 @@ const editDesc = document.getElementById('edit-desc');
 const editColor = document.getElementById('edit-color');
 const colorPreviewText = document.getElementById('color-preview-text');
 const modalBtnSave = document.getElementById('modal-btn-save');
+const modalBtnCancel = document.getElementById('modal-btn-cancel');
 const modalBtnDelete = document.getElementById('modal-btn-delete');
-const modalBtnGoogle = document.getElementById('modal-btn-google');
 
 // API Config
 const CLIENT_ID = '548955285266-anr16ad0iudd6ej88oceg5ahs6je6lgs.apps.googleusercontent.com';
@@ -38,32 +46,49 @@ let events = []; // Array of event objects
 let deletedEvents = []; // Array of { uid, googleId }
 let editingEventId = null; // ID of event currently being edited
 let inputDebounceTimer = null;
+let currentMode = 'desktop'; // 'desktop' or 'mobile'
+let currentTheme = 'dark'; // 'dark' or 'light'
 
 // Preset Colors
 const PRESET_COLORS = [
     '#ef4444', // Red
-    '#f97316', // Orange
     '#f59e0b', // Amber
     '#10b981', // Emerald
-    '#06b6d4', // Cyan
     '#3b82f6', // Blue
     '#6366f1', // Indigo
     '#8b5cf6', // Violet
-    '#ec4899', // Pink
     '#64748b'  // Slate
 ];
 
-// Initialization
 // Initialization
 loadEvents();
 renderCalendar();
 // Initialize Main Palette
 renderColorPaletteWithLogic(colorPalette, eventColorInput);
 // Initialize Modal Palette
-const modalColorPalette = document.getElementById('modal-color-palette'); // Need to get this element
+const modalColorPalette = document.getElementById('modal-color-palette');
 if (modalColorPalette) {
     renderColorPaletteWithLogic(modalColorPalette, document.getElementById('edit-color'));
 }
+
+
+function setMode(mode) {
+    currentMode = mode;
+    if (mode === 'mobile') {
+        document.body.classList.add('mobile-simulator');
+        btnModeMobile.classList.add('active');
+        btnModeDesktop.classList.remove('active');
+        console.log(`Switched to Mobile Simulator`);
+    } else {
+        document.body.classList.remove('mobile-simulator');
+        btnModeDesktop.classList.add('active');
+        btnModeMobile.classList.remove('active');
+    }
+    // Trigger resize to adjust calendar if needed
+    window.dispatchEvent(new Event('resize'));
+}
+
+
 
 
 // Google API Loaders
@@ -97,10 +122,39 @@ prevMonthBtn.addEventListener('click', () => changeMonth(-1));
 nextMonthBtn.addEventListener('click', () => changeMonth(1));
 btnOpenSync.addEventListener('click', handleSyncClick);
 
+// Mode & Theme Listeners
+if (btnModeDesktop) btnModeDesktop.addEventListener('click', () => setMode('desktop'));
+if (btnModeMobile) btnModeMobile.addEventListener('click', () => setMode('mobile'));
+
+if (btnThemeToggle) {
+    btnThemeToggle.addEventListener('click', () => {
+        if (currentTheme === 'dark') {
+            document.body.classList.add('light-mode');
+            btnThemeToggle.textContent = '☀️ Light';
+            currentTheme = 'light';
+        } else {
+            document.body.classList.remove('light-mode');
+            btnThemeToggle.textContent = '🌙 Dark';
+            currentTheme = 'dark';
+        }
+    });
+}
+
 // Modal Listeners
 closeModal.addEventListener('click', hideModal);
+if (modalBtnCancel) modalBtnCancel.addEventListener('click', hideModal); // Added listener for modalBtnCancel
 modalBtnSave.addEventListener('click', saveModalEvent);
 modalBtnDelete.addEventListener('click', deleteModalEvent);
+
+// Close modal on background click
+modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+        hideModal();
+    }
+});
+
+
+
 
 // --- Logic ---
 
@@ -464,7 +518,17 @@ async function updateGoogleEvent(eventId, le) {
 
 function createGoogleEventResource(le) {
     const start = le.isAllDay ? { date: formatDateForGoogleAllDay(le.start) } : { dateTime: le.start.toISOString() };
-    const end = le.isAllDay ? { date: formatDateForGoogleAllDay(le.end) } : { dateTime: le.end.toISOString() };
+
+    // Google Calendar's all-day events use exclusive end dates
+    // So we need to add 1 day to the end date for all-day events
+    let end;
+    if (le.isAllDay) {
+        const endDateForGoogle = new Date(le.end);
+        endDateForGoogle.setDate(endDateForGoogle.getDate() + 1);
+        end = { date: formatDateForGoogleAllDay(endDateForGoogle) };
+    } else {
+        end = { dateTime: le.end.toISOString() };
+    }
 
     return {
         'summary': `[AI] ${le.title}`,
@@ -487,7 +551,11 @@ function updateLocalEventFromGoogle(le, ge) {
     if (ge.start.date) {
         le.isAllDay = true;
         le.start = new Date(ge.start.date);
-        le.end = new Date(ge.end.date);
+        // Google Calendar uses exclusive end dates for all-day events
+        // So we need to subtract 1 day when importing
+        const googleEndDate = new Date(ge.end.date);
+        googleEndDate.setDate(googleEndDate.getDate() - 1);
+        le.end = googleEndDate;
     } else {
         le.isAllDay = false;
         le.start = new Date(ge.start.dateTime);
@@ -518,7 +586,11 @@ function createLocalEventFromGoogle(ge) {
     if (ge.start.date) {
         newEvent.isAllDay = true;
         newEvent.start = new Date(ge.start.date);
-        newEvent.end = new Date(ge.end.date);
+        // Google Calendar uses exclusive end dates for all-day events
+        // So we need to subtract 1 day when importing
+        const googleEndDate = new Date(ge.end.date);
+        googleEndDate.setDate(googleEndDate.getDate() - 1);
+        newEvent.end = googleEndDate;
     } else {
         newEvent.isAllDay = false;
         newEvent.start = new Date(ge.start.dateTime);
@@ -827,10 +899,6 @@ function openModal(event) {
     editDesc.value = event.description || '';
     editColor.value = event.color || '#3b82f6'; // Set Color
     colorPreviewText.textContent = event.color || '#3b82f6';
-
-    // Update Google Link
-    const googleLink = generateGoogleLink(event);
-    modalBtnGoogle.href = googleLink;
 
     modal.classList.remove('hidden');
 }
@@ -1143,21 +1211,27 @@ function renderCalendar() {
         });
 
         el.addEventListener('click', () => {
-            openModal({
-                id: null,
-                title: '',
-                start: date,
-                end: new Date(date.getTime() + 60 * 60 * 1000),
-                description: '',
-                isAllDay: true,
-                color: eventColorInput.value // Use current picker value
-            });
-            if (editingEventId === null) {
+            if (currentMode === 'mobile') {
+                openDayDetail(date);
+            } else {
+                // Desktop: Open Add Event Modal
+                editingEventId = null; // Reset editing state
+                modalBtnDelete.style.display = 'none'; // Hide delete button for new event
+
+                // Set default times (e.g., 9 AM to 10 AM)
                 const start = new Date(date);
                 start.setHours(9, 0, 0, 0);
-                editStart.value = toLocalISOString(start).slice(0, 16);
                 const end = new Date(start.getTime() + 60 * 60 * 1000);
+
+                // Populate Modal Fields
+                editTitle.value = '';
+                editStart.value = toLocalISOString(start).slice(0, 16);
                 editEnd.value = toLocalISOString(end).slice(0, 16);
+                editDesc.value = '';
+                editColor.value = eventColorInput.value; // Use current picker value
+
+                // Show Modal
+                modal.classList.remove('hidden');
             }
         });
 
@@ -1214,3 +1288,102 @@ function highlightSelected(container, color) {
         }
     });
 }
+// Day Detail Modal Elements
+const dayDetailModal = document.getElementById('day-detail-modal');
+const closeDayDetail = document.getElementById('close-day-detail');
+const dayDetailDate = document.getElementById('day-detail-date');
+const dayDetailList = document.getElementById('day-detail-list');
+const btnAddOnDetail = document.getElementById('btn-add-on-detail');
+
+let selectedDetailDate = null;
+
+// ... existing code ...
+
+closeDayDetail.addEventListener('click', () => {
+    dayDetailModal.classList.add('hidden');
+});
+
+// Close day detail modal on background click
+dayDetailModal.addEventListener('click', (e) => {
+    if (e.target === dayDetailModal) {
+        dayDetailModal.classList.add('hidden');
+    }
+});
+
+btnAddOnDetail.addEventListener('click', () => {
+    dayDetailModal.classList.add('hidden');
+    // Pre-fill input with selected date?
+    // For now just focus input.
+    inputText.focus();
+    // Ideally we could pre-fill "11/25 "
+    if (selectedDetailDate) {
+        const m = selectedDetailDate.getMonth() + 1;
+        const d = selectedDetailDate.getDate();
+        inputText.value = `${m}/${d} `;
+    }
+});
+
+function openDayDetail(date) {
+    selectedDetailDate = date;
+    const dateStr = date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+    dayDetailDate.textContent = dateStr;
+    dayDetailList.innerHTML = '';
+
+    // Filter events for this day
+    const dayEvents = events.filter(e => {
+        const start = new Date(e.start);
+        const end = new Date(e.end);
+
+        // Check overlap
+        // Event starts before or on this day AND ends after or on this day
+        // Normalize date to midnight for comparison
+        const checkDate = new Date(date);
+        checkDate.setHours(0, 0, 0, 0);
+        const nextDate = new Date(checkDate);
+        nextDate.setDate(nextDate.getDate() + 1);
+
+        // Simple overlap check
+        return start < nextDate && end >= checkDate;
+    });
+
+    dayEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
+
+    if (dayEvents.length === 0) {
+        dayDetailList.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:2rem;">일정이 없습니다.</p>';
+    } else {
+        dayEvents.forEach(e => {
+            const el = document.createElement('div');
+            el.className = 'day-event-item';
+            el.style.borderLeftColor = e.color || '#3b82f6';
+
+            let timeStr = '';
+            if (e.isAllDay) {
+                timeStr = '하루 종일';
+            } else {
+                const s = new Date(e.start);
+                const end = new Date(e.end);
+                timeStr = `${s.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} ~ ${end.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`;
+            }
+
+            el.innerHTML = `
+                <div class="day-event-time">${timeStr}</div>
+                <div class="day-event-title">${e.title}</div>
+                ${e.description ? `<div class="day-event-desc">${e.description}</div>` : ''}
+            `;
+
+            el.addEventListener('click', () => {
+                dayDetailModal.classList.add('hidden');
+                openModal(e);
+            });
+
+            dayDetailList.appendChild(el);
+        });
+    }
+
+    dayDetailModal.classList.remove('hidden');
+}
+
+// Update renderCalendar to add click listener
+// We need to find where renderCalendar creates .calendar-day and add listener
+// Since renderCalendar is huge, let's use a targeted replace or just append the logic if possible.
+// Actually, renderCalendar clears grid and rebuilds. We must modify renderCalendar.
