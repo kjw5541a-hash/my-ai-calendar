@@ -139,20 +139,52 @@ header {
     gap: 0.5rem;
 }
 
-.header-content {
+/* Mode Selection */
+.mode-selection {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-bottom: 0.3rem;
+}
+
+.mode-btn {
+    padding: 0.3rem 0.8rem;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.85rem;
+}
+
+.mode-btn.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+/* Title Header */
+.title-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    width: 100%;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
 }
 
-header h1 {
+.title-header h1 {
     font-size: 1.5rem;
     font-weight: 700;
     margin: 0;
-    background: linear-gradient(to right, #c084fc, #6366f1);
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
+}
+
+.title-header .color-palette {
+    margin: 0;
 }
 
 .sync-buttons {
@@ -175,11 +207,51 @@ header p {
 }
 
 /* Input Section */
-.input-section {
+/* Input and Sync Row */
+.input-sync-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
     margin-bottom: 0.5rem;
 }
 
+.input-sync-row .input-wrapper {
+    flex: 1;
+}
+
+.input-sync-row .btn-sync {
+    flex-shrink: 0;
+    padding: 0.6rem 1rem;
+    height: fit-content;
+}
+
+.parsing-feedback {
+    min-height: 1.2rem;
+    font-size: 0.85rem;
+    margin-bottom: 0.3rem;
+}
+
+/* Color and Input Row */
+.color-input-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.color-picker-container {
+    flex-shrink: 0;
+}
+
+.color-picker-container label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
 .input-wrapper {
+    flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     background: rgba(255, 255, 255, 0.2);
@@ -400,7 +472,10 @@ body.light-mode .calendar-header button:hover {
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 0.3rem;
+    grid-template-rows: repeat(6, 1fr);
+    gap: 0.5rem;
+    border-radius: 12px;
+    overflow: hidden;
 }
 
 .calendar-day {
@@ -481,27 +556,52 @@ body.light-mode .calendar-day.today {
 /* Color Palette */
 .color-palette {
     display: flex;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
+    gap: 0.4rem;
     flex-wrap: wrap;
+    max-width: 320px;
 }
 
-.color-option {
-    width: 24px;
-    height: 24px;
+.color-dot {
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
-    transition: transform 0.2s, border-color 0.2s;
+    transition: all 0.2s;
 }
 
-.color-option:hover {
-    transform: scale(1.2);
+.color-dot:hover {
+    transform: scale(1.15);
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
-.color-option.selected {
-    border-color: white;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+.color-dot.selected {
+    border-color: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+
+/* Custom color picker dot */
+.color-dot.custom-color {
+    background: conic-gradient(from 0deg,
+            #ff0000 0deg 60deg,
+            #ffff00 60deg 120deg,
+            #00ff00 120deg 180deg,
+            #00ffff 180deg 240deg,
+            #0000ff 240deg 300deg,
+            #ff00ff 300deg 360deg);
+    position: relative;
+}
+
+.color-dot.custom-color::after {
+    content: '+';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
 }
 
 /* Modal */
@@ -1164,17 +1264,38 @@ body.mobile-simulator .event-dot {
 body.mobile-simulator .modal-content {
     width: 95%;
     max-width: 360px;
-    max-height: 75vh;
-    padding: 1.2rem;
+    max-height: 80vh;
+    padding: 1rem;
 }
 
 body.mobile-simulator .modal h2 {
-    font-size: 1.2rem;
-    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    margin-bottom: 0.8rem;
 }
 
 body.mobile-simulator .form-group {
-    margin-bottom: 1rem;
+    margin-bottom: 0.6rem;
+}
+
+body.mobile-simulator .form-group label {
+    font-size: 0.85rem;
+    margin-bottom: 0.3rem;
+}
+
+body.mobile-simulator .form-group input,
+body.mobile-simulator .form-group textarea {
+    font-size: 0.9rem;
+    padding: 0.5rem;
+}
+
+body.mobile-simulator .modal-actions {
+    margin-top: 0.8rem;
+    gap: 0.5rem;
+}
+
+body.mobile-simulator .modal-actions .btn {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.9rem;
 }
 
 body.light-mode .day-detail-content {

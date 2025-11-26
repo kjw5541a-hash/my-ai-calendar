@@ -1354,52 +1354,92 @@ function renderCalendar() {
 // --- Palette Logic ---
 
 function renderColorPaletteWithLogic(container, inputElement) {
+    // Get recent colors from localStorage (max 7)
+    let recentColors = JSON.parse(localStorage.getItem('recentColors') || '[]');
+
+    // Ensure we have default colors if no recent colors
+    const defaultColors = [
+        '#ef4444', // Red
+        '#f97316', // Orange  
+        '#eab308', // Yellow
+        '#22c55e', // Green
+        '#3b82f6', // Blue
+        '#8b5cf6', // Purple
+        '#ec4899'  // Pink
+    ];
+
+    // Merge: recent colors first, then fill with defaults
+    let displayColors = [...recentColors];
+    for (const color of defaultColors) {
+        if (displayColors.length >= 7) break;
+        if (!displayColors.includes(color)) {
+            displayColors.push(color);
+        }
+    }
+
+    // Limit to 7 colors
+    displayColors = displayColors.slice(0, 7);
+
     container.innerHTML = '';
 
-    PRESET_COLORS.forEach(color => {
+    // Add 7 color dots
+    displayColors.forEach(color => {
         const dot = document.createElement('div');
-        dot.className = 'color-option';
+        dot.className = 'color-dot';
         dot.style.backgroundColor = color;
-        dot.dataset.color = color; // Store hex
         dot.addEventListener('click', () => {
             inputElement.value = color;
-            // Trigger input event manually to update UI
-            inputElement.dispatchEvent(new Event('input'));
-
-            if (inputElement.id === 'edit-color') {
-                const previewText = document.getElementById('color-preview-text');
-                if (previewText) previewText.textContent = color;
-            }
-            highlightSelected(container, color);
+            saveRecentColor(color);
+            updateSelectedDot(container, dot);
         });
         container.appendChild(dot);
     });
 
-    // Custom Picker Button
-    const customBtn = document.createElement('div');
-    customBtn.className = 'color-option custom-picker-btn';
-    customBtn.style.background = 'conic-gradient(from 0deg, red, yellow, lime, aqua, blue, magenta, red)';
-    customBtn.title = "사용자 지정 색상";
-    customBtn.addEventListener('click', () => {
-        inputElement.click();
-    });
-    container.appendChild(customBtn);
+    // Add custom color picker dot (8th)
+    const customDot = document.createElement('div');
+    customDot.className = 'color-dot custom-color';
+    customDot.addEventListener('click', () => {
+        // Create temporary color input
+        const tempInput = document.createElement('input');
+        tempInput.type = 'color';
+        tempInput.value = inputElement.value || '#3b82f6';
+        tempInput.style.position = 'absolute';
+        tempInput.style.opacity = '0';
+        document.body.appendChild(tempInput);
 
-    // Sync Input
-    inputElement.addEventListener('input', (e) => {
-        highlightSelected(container, e.target.value);
+        tempInput.addEventListener('change', () => {
+            const selectedColor = tempInput.value;
+            inputElement.value = selectedColor;
+            saveRecentColor(selectedColor);
+            renderColorPaletteWithLogic(container, inputElement); // Refresh palette
+            document.body.removeChild(tempInput);
+        });
+
+        tempInput.click();
     });
+    container.appendChild(customDot);
 }
 
-function highlightSelected(container, color) {
-    const dots = container.querySelectorAll('.color-option');
-    dots.forEach(dot => {
+function saveRecentColor(color) {
+    let recentColors = JSON.parse(localStorage.getItem('recentColors') || '[]');
+
+    // Remove if already exists
+    recentColors = recentColors.filter(c => c !== color);
+
+    // Add to front
+    recentColors.unshift(color);
+
+    // Keep only 7
+    recentColors = recentColors.slice(0, 7);
+
+    localStorage.setItem('recentColors', JSON.stringify(recentColors));
+}
+
+function updateSelectedDot(container, selectedDot) {
+    container.querySelectorAll('.color-dot').forEach(dot => {
         dot.classList.remove('selected');
-        // Check if color matches (case insensitive)
-        if (dot.dataset.color && dot.dataset.color.toLowerCase() === color.toLowerCase()) {
-            dot.classList.add('selected');
-        }
     });
+    selectedDot.classList.add('selected');
 }
 // --- Day Detail Modal Logic ---
 

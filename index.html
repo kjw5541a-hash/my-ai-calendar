@@ -11,10 +11,10 @@
     <title>AI 캘린더 비서</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="style.css?v=13">
+    <link rel="stylesheet" href="style.css?v=17">
     <script src="lib/chrono.min.js"></script>
 </head>
-<!--TEST comment -->
+
 <body>
     <div class="background-blobs">
         <div class="blob blob-1"></div>
@@ -22,36 +22,33 @@
         <div class="blob blob-3"></div>
     </div>
 
-    <!-- Top Toolbar -->
-    <nav id="top-toolbar">
-        <div class="toolbar-content">
-            <button id="btn-mode-desktop" class="toolbar-btn active">Desktop</button>
-            <button id="btn-mode-mobile" class="toolbar-btn">Mobile</button>
-        </div>
-        <div class="toolbar-content" style="margin-left: 10px;">
-            <button id="btn-theme-toggle" class="toolbar-btn">🌙 Dark</button>
-        </div>
-    </nav>
-
     <div class="container">
-        <header>
-            <div class="header-content">
-                <h1>AI Calendar</h1>
-                <button id="btn-open-sync" class="btn btn-primary btn-sm">동기화</button>
-            </div>
+        <!-- Mode Selection (Top) -->
+        <div class="mode-selection">
+            <button id="btn-mode-desktop" class="mode-btn active">Desktop</button>
+            <button id="btn-mode-mobile" class="mode-btn">Mobile</button>
+            <button id="btn-theme-toggle" class="mode-btn theme-btn">🌙</button>
+        </div>
+
+        <!-- Title and Color Row -->
+        <header class="title-header">
+            <h1>AI 캘린더 비서</h1>
+            <input type="color" id="event-color-input" value="#3b82f6" style="display: none;">
+            <div id="color-palette" class="color-palette"></div>
         </header>
 
-        <!-- Input Section -->
-        <section class="input-section">
-            <div id="color-palette" class="color-palette"></div>
+        <!-- Input and Sync Row -->
+        <section class="input-sync-row">
             <div class="input-wrapper">
                 <textarea id="input-text" placeholder="일정 입력"></textarea>
                 <button id="btn-voice-input" class="btn-icon-img" title="음성 입력">
                     <img src="mic-icon.png" alt="음성 입력">
                 </button>
             </div>
-            <div id="parsing-feedback" class="parsing-feedback"></div>
+            <button id="btn-open-sync" class="btn btn-sync">동기화</button>
         </section>
+
+        <div id="parsing-feedback" class="parsing-feedback"></div>
 
         <!-- Calendar View -->
         <section class="calendar-section">
@@ -88,16 +85,16 @@
 
                 <div class="form-group">
                     <label>일시</label>
-                    <div class="date-range-inputs">
-                        <input type="datetime-local" id="edit-start">
-                        <span>~</span>
-                        <input type="datetime-local" id="edit-end">
+                    <div class="date-time-row">
+                        <input type="datetime-local" id="edit-start" class="datetime-input">
+                        <span class="datetime-separator">~</span>
+                        <input type="datetime-local" id="edit-end" class="datetime-input">
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>설명</label>
-                    <textarea id="edit-desc"></textarea>
+                    <textarea id="edit-desc" rows="2"></textarea>
                 </div>
 
                 <div class="modal-actions">
@@ -139,7 +136,7 @@
         </div>
 
         <!-- Scripts -->
-        <script src="app.js?v=13"></script>
+        <script src="app.js?v=17"></script>
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
         <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
 </body>
