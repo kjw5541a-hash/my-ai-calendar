@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 캘린더 비서</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=13">
     <script src="lib/chrono.min.js"></script>
 </head>
 
@@ -30,21 +30,20 @@
     <div class="container">
         <header>
             <div class="header-content">
-                <h1>📅 AI 캘린더 비서</h1>
-                <button id="btn-open-sync" class="btn btn-primary btn-sm">
-                    <span class="icon">🔄</span> 동기화
-                </button>
+                <h1>AI Calendar</h1>
+                <button id="btn-open-sync" class="btn btn-primary btn-sm">동기화</button>
             </div>
         </header>
 
         <!-- Input Section -->
         <section class="input-section">
-            <div class="input-wrapper">
-                <input type="color" id="event-color" value="#3b82f6" title="일정 색상 선택">
-                <textarea id="input-text" placeholder="일정을 입력하세요..."></textarea>
-                <button id="btn-quick-add" class="btn-icon" title="추가">➕</button>
-            </div>
             <div id="color-palette" class="color-palette"></div>
+            <div class="input-wrapper">
+                <textarea id="input-text" placeholder="일정 입력"></textarea>
+                <button id="btn-voice-input" class="btn-icon-img" title="음성 입력">
+                    <img src="mic-icon.png" alt="음성 입력">
+                </button>
+            </div>
             <div id="parsing-feedback" class="parsing-feedback"></div>
         </section>
 
@@ -73,20 +72,20 @@
                 </div>
 
                 <div class="form-group">
-                    <label>일시</label>
-                    <div class="date-range-inputs">
-                        <input type="datetime-local" id="edit-start">
-                        <span>~</span>
-                        <input type="datetime-local" id="edit-end">
-                    </div>
-                </div>
-
-                <div class="form-group">
                     <label>색상</label>
                     <div class="color-picker-wrapper">
                         <input type="color" id="edit-color" style="visibility: hidden; position: absolute;">
                         <span id="color-preview-text" style="display:none;"></span>
                         <div id="modal-color-palette" class="color-palette" style="margin-left: 0;"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>일시</label>
+                    <div class="date-range-inputs">
+                        <input type="datetime-local" id="edit-start">
+                        <span>~</span>
+                        <input type="datetime-local" id="edit-end">
                     </div>
                 </div>
 
@@ -127,14 +126,14 @@
                 <div id="day-detail-list" class="day-detail-list">
                     <!-- Events will be populated here -->
                 </div>
-                <div class="modal-actions">
-                    <button id="btn-add-on-detail" class="btn btn-primary">➕ 일정 추가</button>
-                </div>
+                <button id="btn-add-event-bottom" class="btn btn-primary btn-add-bottom">
+                    + 일정 추가
+                </button>
             </div>
         </div>
 
         <!-- Scripts -->
-        <script src="app.js"></script>
+        <script src="app.js?v=13"></script>
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
         <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
 </body>

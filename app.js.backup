@@ -42,7 +42,7 @@ const dayDetailModal = document.getElementById('day-detail-modal');
 const closeDayDetail = document.getElementById('close-day-detail');
 const dayDetailDate = document.getElementById('day-detail-date');
 const dayDetailList = document.getElementById('day-detail-list');
-const btnAddEventBottom = document.getElementById('btn-add-event-bottom');
+const btnAddOnDetail = document.getElementById('btn-add-on-detail');
 
 // API Config
 const CLIENT_ID = '548955285266-anr16ad0iudd6ej88oceg5ahs6je6lgs.apps.googleusercontent.com';
@@ -83,20 +83,6 @@ const modalColorPalette = document.getElementById('modal-color-palette');
 if (modalColorPalette) {
     renderColorPaletteWithLogic(modalColorPalette, document.getElementById('edit-color'));
 }
-
-// Debug: Global click listener for mobile mode
-document.addEventListener('click', (e) => {
-    if (currentMode === 'mobile') {
-        console.log('[MOBILE CLICK DEBUG]', {
-            target: e.target,
-            className: e.target.className,
-            tagName: e.target.tagName,
-            x: e.clientX,
-            y: e.clientY
-        });
-    }
-}, true); // Capture phase to catch all clicks
-
 
 
 function setMode(mode) {
@@ -292,27 +278,18 @@ function renderCalendar() {
                 const timeStr = e.start.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
                 displayText = `${timeStr} ${e.title}`;
             }
-            eventEl.style.background = `linear-gradient(135deg, ${e.color}22, ${e.color}44)`;
-            eventEl.style.borderLeft = `3px solid ${e.color}`;
+
             eventEl.textContent = displayText;
             eventEl.title = displayText; // Tooltip
-
-            // Event click also opens Day Detail Modal (no stopPropagation)
-            eventEl.addEventListener('click', () => {
+            eventEl.addEventListener('click', (ev) => {
+                ev.stopPropagation(); // Prevent clicking day
                 openDayDetailModal(date, dayEvents);
             });
-
             el.appendChild(eventEl);
         });
 
         // Click on day to show Day Detail Modal
-        el.addEventListener('click', (e) => {
-            console.log('[DEBUG] ========== CALENDAR DAY CLICKED ==========');
-            console.log('[DEBUG] Date:', date.toDateString());
-            console.log('[DEBUG] Current Mode:', currentMode);
-            console.log('[DEBUG] Event Target:', e.target);
-            console.log('[DEBUG] Event Current Target:', e.currentTarget);
-            console.log('[DEBUG] Number of events on this day:', dayEvents.length);
+        el.addEventListener('click', () => {
             openDayDetailModal(date, dayEvents);
         });
 
@@ -990,7 +967,6 @@ function handleVoiceInput() {
 // --- Modal ---
 
 function openModal(event) {
-    console.log('[DEBUG] openModal called with event:', event);
     editingEventId = event.id;
     editTitle.value = event.title;
     editStart.value = toLocalISOString(event.start).slice(0, 16);
@@ -999,17 +975,7 @@ function openModal(event) {
     editColor.value = event.color || '#3b82f6'; // Set Color
     colorPreviewText.textContent = event.color || '#3b82f6';
 
-    // Ensure delete button is visible for existing events
-    if (event.id) {
-        modalBtnDelete.style.display = 'inline-flex';
-        console.log('[DEBUG] Delete button shown for existing event');
-    } else {
-        modalBtnDelete.style.display = 'none';
-        console.log('[DEBUG] Delete button hidden for new event');
-    }
-
     modal.classList.remove('hidden');
-    console.log('[DEBUG] Modal opened successfully');
 }
 
 // Color picker listener
@@ -1292,17 +1258,15 @@ function renderCalendar() {
 
             let displayText = e.title;
             if (e.isAllDay) {
-                // Removed [Day] prefix for better readability
-                displayText = e.title;
+                displayText = `[Day] ${displayText}`;
             } else {
                 // Only show time if it's the start day of the event
                 if (isSameDay(e.start, date)) {
                     const timeStr = e.start.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
-                    // Removed brackets around time for better readability
-                    displayText = `${timeStr} ${e.title}`;
+                    displayText = `[${timeStr}] ${e.title}`;
                 } else {
                     // Continuation
-                    displayText = `(계속) ${e.title}`;
+                    displayText = `(계속) ${displayText}`;
                 }
             }
 
@@ -1323,28 +1287,26 @@ function renderCalendar() {
 
         el.addEventListener('click', () => {
             if (currentMode === 'mobile') {
-                // Mobile: Open Day Detail Modal with event list
-                openDayDetailModal(date, dayEvents);
+                openDayDetail(date);
             } else {
                 // Desktop: Open Add Event Modal
                 editingEventId = null; // Reset editing state
                 modalBtnDelete.style.display = 'none'; // Hide delete button for new event
 
-                // Set default time to 9 AM
-                const startDate = new Date(date);
-                startDate.setHours(9, 0, 0, 0);
-                const endDate = new Date(startDate);
-                endDate.setHours(10, 0, 0, 0);
+                // Set default times (e.g., 9 AM to 10 AM)
+                const start = new Date(date);
+                start.setHours(9, 0, 0, 0);
+                const end = new Date(start.getTime() + 60 * 60 * 1000);
 
-                openModal({
-                    id: null,
-                    title: '',
-                    start: startDate,
-                    end: endDate,
-                    description: '',
-                    color: eventColorInput.value,
-                    isAllDay: true
-                });
+                // Populate Modal Fields
+                editTitle.value = '';
+                editStart.value = toLocalISOString(start).slice(0, 16);
+                editEnd.value = toLocalISOString(end).slice(0, 16);
+                editDesc.value = '';
+                editColor.value = eventColorInput.value; // Use current picker value
+
+                // Show Modal
+                modal.classList.remove('hidden');
             }
         });
 
@@ -1417,131 +1379,76 @@ dayDetailModal.addEventListener('click', (e) => {
     }
 });
 
-btnAddEventBottom.addEventListener('click', () => {
-    hideDayDetailModal();
-    // Open modal for new event on selected date
-    const start = new Date(selectedDetailDate);
-    start.setHours(9, 0, 0, 0);
-    openModal({
-        id: null,
-        title: '',
-        start: start,
-        end: new Date(start.getTime() + 60 * 60 * 1000),
-        description: '',
-        isAllDay: true
-    });
+btnAddOnDetail.addEventListener('click', () => {
+    dayDetailModal.classList.add('hidden');
+    // Pre-fill input with selected date?
+    // For now just focus input.
+    inputText.focus();
+    // Ideally we could pre-fill "11/25 "
+    if (selectedDetailDate) {
+        const m = selectedDetailDate.getMonth() + 1;
+        const d = selectedDetailDate.getDate();
+        inputText.value = `${m}/${d} `;
+    }
 });
 
-function openDayDetailModal(date, dayEvents) {
-    console.log('[DEBUG] openDayDetailModal called');
-    console.log('[DEBUG] Date:', date);
-    console.log('[DEBUG] Day Events:', dayEvents);
-    console.log('[DEBUG] Current Mode:', currentMode);
 
-    selectedDetailDate = date;
-    const dateStr = date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
-    dayDetailDate.textContent = dateStr;
-    dayDetailList.innerHTML = '';
+const eventContent = document.createElement('div');
+eventContent.className = 'event-content';
 
-    // Sort events by start time
-    dayEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
-
-    dayEvents.forEach(event => {
-        const eventCard = document.createElement('div');
-        eventCard.className = 'event-card';
-
-        // Time display
-        const timeDiv = document.createElement('div');
-        timeDiv.className = 'event-card-time';
-        if (event.isAllDay) {
-            timeDiv.textContent = '하루 종일';
-        } else {
-            const startTime = event.start.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
-            const endTime = event.end.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
-            timeDiv.textContent = `${startTime} ~ ${endTime}`;
-        }
-
-        // Title
-        const titleDiv = document.createElement('div');
-        titleDiv.className = 'event-card-title';
-        titleDiv.textContent = event.title;
-
-        // Description
-        if (event.description) {
-            const descDiv = document.createElement('div');
-            descDiv.className = 'event-card-desc';
-            descDiv.textContent = event.description;
-            eventCard.appendChild(timeDiv);
-            eventCard.appendChild(titleDiv);
-            eventCard.appendChild(descDiv);
-        } else {
-            eventCard.appendChild(timeDiv);
-            eventCard.appendChild(titleDiv);
-        }
-
-        // Color bar
-        if (event.color) {
-            eventCard.style.borderLeft = `4px solid ${event.color}`;
-        }
-
-        // Swipe actions container
-        const swipeContainer = document.createElement('div');
-        swipeContainer.className = 'swipe-container';
-
-        // Delete action (right, red) - only swipe left to delete
-        const deleteAction = document.createElement('div');
-        deleteAction.className = 'swipe-action-delete';
-        deleteAction.innerHTML = '<span>🗑️ 삭제</span>';
-        deleteAction.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent container click
-            deleteEventFromDetail(event.id);
-        });
-
-        // Add click listener to swipe-container
-        swipeContainer.addEventListener('click', (e) => {
-            console.log('[DEBUG] Swipe container clicked', e.target);
-
-            // Don't trigger if swiping
-            if (eventCard.classList.contains('swiping')) {
-                console.log('[DEBUG] Ignoring click - card is swiping');
-                return;
-            }
-
-            console.log('[DEBUG] Opening modal for event:', event.title);
-            hideDayDetailModal();
-            openModal(event);
-        });
-
-        swipeContainer.appendChild(deleteAction);
-        swipeContainer.appendChild(eventCard);
-
-        // Add swipe gesture
-        addSwipeGesture(swipeContainer, eventCard);
-
-        dayDetailList.appendChild(swipeContainer);
-    });
-
-    dayDetailModal.classList.remove('hidden');
-    console.log('[DEBUG] Day Detail Modal opened, hidden class removed');
-    console.log('[DEBUG] Modal element:', dayDetailModal);
-    console.log('[DEBUG] Modal computed display:', window.getComputedStyle(dayDetailModal).display);
+let displayText = event.title;
+if (!event.isAllDay) {
+    const timeStr = event.start.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+    displayText = `${timeStr} ${event.title}`;
 }
+
+eventContent.textContent = displayText;
+if (event.color) {
+    eventContent.style.borderLeft = `4px solid ${event.color}`;
+    eventContent.style.paddingLeft = '12px';
+}
+
+const actionsLeft = document.createElement('div');
+actionsLeft.className = 'swipe-action-left';
+actionsLeft.innerHTML = '<span>🗑️ 삭제</span>';
+actionsLeft.addEventListener('click', () => deleteEventFromDetail(event.id));
+
+const actionsRight = document.createElement('div');
+actionsRight.className = 'swipe-action-right';
+actionsRight.innerHTML = '<span>✏️ 수정</span>';
+actionsRight.addEventListener('click', () => {
+    hideDayDetailModal();
+    openModal(event);
+});
+
+eventItem.appendChild(actionsLeft);
+eventItem.appendChild(eventContent);
+eventItem.appendChild(actionsRight);
+
+// Add swipe gesture
+addSwipeGesture(eventItem, eventContent);
+
+// Click to edit
+eventContent.addEventListener('click', () => {
+    hideDayDetailModal();
+    openModal(event);
+});
+
+dayDetailList.appendChild(eventItem);
+    });
+}
+
+dayDetailModal.classList.remove('hidden');
+    }
 
 function addSwipeGesture(container, content) {
     let startX = 0;
     let currentX = 0;
     let isDragging = false;
-    let hasMoved = false; // Track if actual movement occurred
-
-    // Store event ID from container's data if available
-    const swipeContainer = content.closest('.swipe-container');
 
     content.addEventListener('touchstart', (e) => {
         startX = e.touches[0].clientX;
-        currentX = startX;
         isDragging = true;
-        hasMoved = false; // Reset on each touch
-        // Don't add 'swiping' class yet - wait for actual movement
     });
 
     content.addEventListener('touchmove', (e) => {
@@ -1549,10 +1456,7 @@ function addSwipeGesture(container, content) {
         currentX = e.touches[0].clientX;
         const diff = currentX - startX;
 
-        // Only allow right swipe (positive diff) for delete
-        if (diff > 0 && Math.abs(diff) > 10) {
-            hasMoved = true; // Mark as moved
-            content.classList.add('swiping'); // Now add swiping class
+        if (Math.abs(diff) > 10) {
             e.preventDefault();
             content.style.transform = `translateX(${diff}px)`;
         }
@@ -1564,34 +1468,22 @@ function addSwipeGesture(container, content) {
 
         const diff = currentX - startX;
 
-        if (hasMoved && diff > 80) {
-            // Swipe right - delete immediately
-            content.style.transform = 'translateX(100%)';
-            content.style.opacity = '0';
-
-            // Find delete button and trigger delete
-            const deleteBtn = container.querySelector('.swipe-action-delete');
-            if (deleteBtn) {
-                setTimeout(() => {
-                    deleteBtn.click();
-                }, 200);
-            }
+        if (diff < -80) {
+            // Swipe left - show delete
+            content.style.transform = 'translateX(-80px)';
+        } else if (diff > 80) {
+            // Swipe right - show edit
+            content.style.transform = 'translateX(80px)';
         } else {
             // Reset
             content.style.transform = 'translateX(0)';
         }
-
-        // Remove swiping class immediately
-        content.classList.remove('swiping');
-        hasMoved = false;
     });
 
-    // Mouse events for desktop testing
+    // Mouse events for desktop
     content.addEventListener('mousedown', (e) => {
         startX = e.clientX;
-        currentX = startX;
         isDragging = true;
-        hasMoved = false;
         content.style.cursor = 'grabbing';
     });
 
@@ -1600,10 +1492,7 @@ function addSwipeGesture(container, content) {
         currentX = e.clientX;
         const diff = currentX - startX;
 
-        // Only allow right swipe
-        if (diff > 0 && Math.abs(diff) > 10) {
-            hasMoved = true;
-            content.classList.add('swiping');
+        if (Math.abs(diff) > 10) {
             content.style.transform = `translateX(${diff}px)`;
         }
     });
@@ -1615,23 +1504,13 @@ function addSwipeGesture(container, content) {
 
         const diff = currentX - startX;
 
-        if (hasMoved && diff > 80) {
-            // Swipe right - delete immediately
-            content.style.transform = 'translateX(100%)';
-            content.style.opacity = '0';
-
-            const deleteBtn = container.querySelector('.swipe-action-delete');
-            if (deleteBtn) {
-                setTimeout(() => {
-                    deleteBtn.click();
-                }, 200);
-            }
+        if (diff < -80) {
+            content.style.transform = 'translateX(-80px)';
+        } else if (diff > 80) {
+            content.style.transform = 'translateX(80px)';
         } else {
             content.style.transform = 'translateX(0)';
         }
-
-        content.classList.remove('swiping');
-        hasMoved = false;
     });
 
     content.addEventListener('mouseleave', () => {
@@ -1639,27 +1518,26 @@ function addSwipeGesture(container, content) {
             isDragging = false;
             content.style.cursor = 'pointer';
             content.style.transform = 'translateX(0)';
-            content.classList.remove('swiping');
-            hasMoved = false;
         }
     });
 }
 
 function deleteEventFromDetail(eventId) {
-    // Delete immediately without confirmation
-    const eventToDelete = events.find(e => e.id === eventId);
-    if (eventToDelete) {
-        deletedEvents.push({
-            uid: eventToDelete.uid,
-            googleId: eventToDelete.googleId
-        });
-    }
-    events = events.filter(e => e.id !== eventId);
-    saveEvents();
+    if (confirm('정말 삭제하시겠습니까?')) {
+        const eventToDelete = events.find(e => e.id === eventId);
+        if (eventToDelete) {
+            deletedEvents.push({
+                uid: eventToDelete.uid,
+                googleId: eventToDelete.googleId
+            });
+        }
+        events = events.filter(e => e.id !== eventId);
+        saveEvents();
 
-    // Refresh the day detail modal
-    const dayEvents = events.filter(e => isSameDay(e.start, selectedDetailDate));
-    openDayDetailModal(selectedDetailDate, dayEvents);
+        // Refresh the day detail modal
+        const dayEvents = events.filter(e => isSameDay(e.start, selectedDetailDate));
+        openDayDetailModal(selectedDetailDate, dayEvents);
+    }
 }
 // Update renderCalendar to add click listener
 // We need to find where renderCalendar creates .calendar-day and add listener
