@@ -358,7 +358,10 @@ async function syncWithGoogle() {
     btn.disabled = true;
 
     try {
-        // 0. Process Deletions First
+        // 2. Process Deletions
+        // Ensure deletedEvents is initialized
+        if (!deletedEvents) deletedEvents = [];
+
         if (deletedEvents.length > 0) {
             const remainingDeletions = [];
             for (const del of deletedEvents) {
@@ -1386,16 +1389,30 @@ function renderColorPaletteWithLogic(container, inputElement) {
     // Add custom color picker dot (6th)
     const customDot = document.createElement('div');
     customDot.className = 'color-dot custom-color';
-    customDot.addEventListener('click', () => {
+    customDot.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent bubbling issues
+
         // Trigger the actual color input (works better on mobile)
         const colorInput = document.getElementById('event-color-input');
         if (colorInput) {
+            // Ensure input is "visible" to browser but hidden from user
+            colorInput.style.display = 'block';
+            colorInput.style.opacity = '0';
+            colorInput.style.position = 'absolute';
+            colorInput.style.left = '0';
+            colorInput.style.top = '0';
+            colorInput.style.width = '1px';
+            colorInput.style.height = '1px';
+
             // Set up one-time listener for color change
             const handleColorChange = () => {
                 const selectedColor = colorInput.value;
                 inputElement.value = selectedColor;
                 saveRecentColor(selectedColor);
                 renderColorPaletteWithLogic(container, inputElement); // Refresh palette
+
+                // Hide again
+                colorInput.style.display = 'none';
                 colorInput.removeEventListener('change', handleColorChange);
             };
 
