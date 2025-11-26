@@ -147,10 +147,11 @@ header {
 }
 
 .title-row h2 {
-    font-size: 1.1rem;
+    font-size: 1.3rem;
     font-weight: 600;
     margin: 0;
     color: var(--text-color);
+    font-family: 'HYHeadlineM', 'HY헤드라인M', sans-serif;
 }
 
 body.light-mode .title-row h2 {
@@ -1178,19 +1179,21 @@ body {
 body.mobile-simulator {
     overflow: hidden;
     /* Prevent body scroll */
+    /* Prevent body scroll */
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
+    /* Move to top */
     height: 100vh;
+    padding-top: 0;
 }
 
 body.mobile-simulator .container {
-    /* iPhone 16 Pro Dimensions (approx logical) */
-    width: 402px;
-    height: 850px;
-    /* Slightly less than 874 to fit in typical laptop screens */
-    max-height: calc(100vh - 80px);
-    /* Safety margin */
+    /* Full width/height for actual mobile usage */
+    width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    max-width: 100%;
 
     /* Phone Look - REMOVED BORDER */
     border: none;
@@ -1202,7 +1205,8 @@ body.mobile-simulator .container {
     /* Layout */
     display: flex;
     flex-direction: column;
-    padding: 20px;
+    padding: 0.5rem;
+    /* Reduced padding (approx 8px) */
     overflow: hidden;
     /* Clip content to phone radius */
     position: relative;
@@ -1271,6 +1275,22 @@ input[type="color"]::-webkit-color-swatch {
     border: 2px solid rgba(255, 255, 255, 0.5);
 }
 
+body.mobile-simulator #btn-voice-input.btn-add-mode {
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+}
+
+.calendar-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    /* Important for nested flex scroll */
+    overflow: hidden;
+    /* Prevent scroll */
+}
+
 body.mobile-simulator .calendar-section {
     flex-grow: 1;
     display: flex;
@@ -1292,13 +1312,6 @@ body.mobile-simulator .calendar-header h2 {
 body.mobile-simulator .calendar-grid {
     flex-grow: 1;
     height: 100%;
-    gap: 2px;
-}
-
-body.mobile-simulator .calendar-day {
-    min-height: 0;
-    /* Allow shrinking */
-    padding: 2px;
     border-radius: 6px;
 }
 

@@ -148,10 +148,35 @@ window.gapiLoaded = gapiLoaded;
 window.gisLoaded = gisLoaded;
 
 // Event Listeners
-inputText.addEventListener('input', handleInputDebounce);
+inputText.addEventListener('input', (e) => {
+    handleInputDebounce(e);
+    updateVoiceButtonState();
+});
 inputText.addEventListener('keydown', handleInputKeydown);
-btnVoiceInput.addEventListener('click', handleVoiceInput);
+btnVoiceInput.addEventListener('click', handleVoiceButtonAction); // Changed handler
 btnOpenSync.addEventListener('click', handleSyncClick);
+
+function updateVoiceButtonState() {
+    if (inputText.value.trim().length > 0) {
+        btnVoiceInput.textContent = '➕';
+        btnVoiceInput.classList.add('btn-add-mode');
+    } else {
+        btnVoiceInput.textContent = '🎤';
+        btnVoiceInput.classList.remove('btn-add-mode');
+    }
+}
+
+function handleVoiceButtonAction() {
+    if (inputText.value.trim().length > 0) {
+        // Add Mode
+        parseAndAddEvent();
+        inputText.value = '';
+        updateVoiceButtonState();
+    } else {
+        // Voice Mode
+        handleVoiceInput();
+    }
+}
 
 // Navigation Buttons
 prevMonthBtn.addEventListener('click', () => changeMonth(-1));
@@ -943,38 +968,34 @@ function handleQuickAdd() {
 }
 
 function handleVoiceInput() {
-    // Check if browser supports speech recognition
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-        alert('이 브라우저는 음성 인식을 지원하지 않습니다. Chrome이나 Safari를 사용해주세요.');
+    if (!('webkitSpeechRecognition' in window)) {
+        alert('이 브라우저는 음성 인식을 지원하지 않습니다.');
         return;
     }
 
-    const recognition = new SpeechRecognition();
+    const recognition = new webkitSpeechRecognition();
     recognition.lang = 'ko-KR';
+    recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
 
-    // Visual feedback
-    btnVoiceInput.style.opacity = '0.5';
-    btnVoiceInput.textContent = '🔴';
+    recognition.onstart = function () {
+        console.log('Voice recognition started');
+        btnVoiceInput.classList.add('listening');
+        inputText.placeholder = "듣고 있어요... 👂";
+    };
 
-    recognition.start();
+    recognition.onend = function () {
+        console.log('Voice recognition ended');
+        btnVoiceInput.classList.remove('listening');
+        inputText.placeholder = "일정을 입력하세요 (예: 내일 점심 약속)";
+    };
 
-    recognition.onresult = (event) => {
+    recognition.onresult = function (event) {
         const transcript = event.results[0][0].transcript;
+        console.log('Recognized:', transcript);
         inputText.value = transcript;
-        // Trigger input event to show parsing feedback
+        // Trigger input event to update UI and parse
         inputText.dispatchEvent(new Event('input'));
-    };
-
-    recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        alert('음성 인식 오류: ' + event.error);
-    };
-
-    recognition.onend = () => {
         btnVoiceInput.style.opacity = '1';
         btnVoiceInput.textContent = '🎤';
     };
@@ -1387,40 +1408,29 @@ function renderColorPaletteWithLogic(container, inputElement) {
     });
 
     // Add custom color picker dot (6th)
-    const customDot = document.createElement('div');
-    customDot.className = 'color-dot custom-color';
-    customDot.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent bubbling issues
+    // We use a label for the hidden input to ensure mobile click works
+    const customLabel = document.createElement('label');
+    customLabel.className = 'color-dot custom-color';
+    customLabel.htmlFor = 'event-color-input'; // Links to the color input
 
-        // Trigger the actual color input (works better on mobile)
-        const colorInput = document.getElementById('event-color-input');
-        if (colorInput) {
-            // Ensure input is "visible" to browser but hidden from user
-            colorInput.style.display = 'block';
-            colorInput.style.opacity = '0';
-            colorInput.style.position = 'absolute';
-            colorInput.style.left = '0';
-            colorInput.style.top = '0';
-            colorInput.style.width = '1px';
-            colorInput.style.height = '1px';
+    // When color input changes, update the UI
+    const colorInput = document.getElementById('event-color-input');
+    if (colorInput) {
+        // Ensure input is technically visible but hidden from view for iOS
+        colorInput.style.display = 'block';
+        colorInput.style.visibility = 'hidden';
+        colorInput.style.position = 'absolute';
+        colorInput.style.left = '-9999px';
 
-            // Set up one-time listener for color change
-            const handleColorChange = () => {
-                const selectedColor = colorInput.value;
-                inputElement.value = selectedColor;
-                saveRecentColor(selectedColor);
-                renderColorPaletteWithLogic(container, inputElement); // Refresh palette
+        colorInput.addEventListener('change', (e) => {
+            const selectedColor = e.target.value;
+            inputElement.value = selectedColor;
+            saveRecentColor(selectedColor);
+            renderColorPaletteWithLogic(container, inputElement); // Refresh palette
+        });
+    }
 
-                // Hide again
-                colorInput.style.display = 'none';
-                colorInput.removeEventListener('change', handleColorChange);
-            };
-
-            colorInput.addEventListener('change', handleColorChange);
-            colorInput.click();
-        }
-    });
-    container.appendChild(customDot);
+    container.appendChild(customLabel);
 }
 
 function saveRecentColor(color) {
