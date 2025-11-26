@@ -11,7 +11,7 @@
     <title>AI 캘린더 비서</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="style.css?v=17">
+    <link rel="stylesheet" href="style.css?v=23">
     <script src="lib/chrono.min.js"></script>
 </head>
 
@@ -23,22 +23,20 @@
     </div>
 
     <div class="container">
-        <!-- Mode Selection (Top) -->
-        <div class="mode-selection">
-            <button id="btn-mode-desktop" class="mode-btn active">Desktop</button>
-            <button id="btn-mode-mobile" class="mode-btn">Mobile</button>
-            <button id="btn-theme-toggle" class="mode-btn theme-btn">🌙</button>
-        </div>
-
-        <!-- Title and Color Row -->
-        <header class="title-header">
-            <h1>AI 캘린더 비서</h1>
+        <!-- Row 1: Color Palette + Theme Toggle -->
+        <div class="color-theme-row">
             <input type="color" id="event-color-input" value="#3b82f6" style="display: none;">
             <div id="color-palette" class="color-palette"></div>
-        </header>
 
-        <!-- Input and Sync Row -->
-        <section class="input-sync-row">
+            <!-- Theme Toggle Switch -->
+            <label class="toggle-switch">
+                <input type="checkbox" id="theme-toggle-checkbox">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <!-- Row 2: Input and Sync -->
+        <div class="input-sync-row">
             <div class="input-wrapper">
                 <textarea id="input-text" placeholder="일정 입력"></textarea>
                 <button id="btn-voice-input" class="btn-icon-img" title="음성 입력">
@@ -46,7 +44,7 @@
                 </button>
             </div>
             <button id="btn-open-sync" class="btn btn-sync">동기화</button>
-        </section>
+        </div>
 
         <div id="parsing-feedback" class="parsing-feedback"></div>
 
@@ -136,7 +134,7 @@
         </div>
 
         <!-- Scripts -->
-        <script src="app.js?v=17"></script>
+        <script src="app.js?v=23"></script>
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
         <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
 </body>

@@ -16,14 +16,6 @@ const prevMonthBtn = document.getElementById('prev-month');
 const nextMonthBtn = document.getElementById('next-month');
 const btnOpenSync = document.getElementById('btn-open-sync');
 
-// Mode Toggle Elements
-const btnModeDesktop = document.getElementById('btn-mode-desktop');
-const btnModeMobile = document.getElementById('btn-mode-mobile');
-const btnThemeToggle = document.getElementById('btn-theme-toggle');
-const deviceModal = document.getElementById('device-modal');
-const closeDeviceModal = document.getElementById('close-device-modal');
-const deviceBtns = document.querySelectorAll('.device-btn');
-
 // Modal Elements
 const modal = document.getElementById('event-modal');
 const closeModal = document.getElementById('close-modal');
@@ -49,39 +41,58 @@ const CLIENT_ID = '548955285266-anr16ad0iudd6ej88oceg5ahs6je6lgs.apps.googleuser
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
 const SCOPES = 'https://www.googleapis.com/auth/calendar';
 
-let tokenClient;
+// --- State Variables ---
+let currentMode = 'mobile'; // Always mobile mode
+let events = [];
+let currentDate = new Date();
+let currentlyOpenEvent = null;
+// OAuth
 let gapiInited = false;
 let gisInited = false;
+let tokenClient;
 
-// State
-let currentDate = new Date(); // For calendar view
-let events = []; // Array of event objects
-let deletedEvents = []; // Array of { uid, googleId }
-let editingEventId = null; // ID of event currently being edited
-let inputDebounceTimer = null;
-let currentMode = 'desktop'; // 'desktop' or 'mobile'
-let currentTheme = 'dark'; // 'dark' or 'light'
-
-// Preset Colors
-const PRESET_COLORS = [
+const predefinedColors = [
     '#ef4444', // Red
-    '#f59e0b', // Amber
-    '#10b981', // Emerald
+    '#f97316', // Orange
+    '#eab308', // Yellow
+    '#22c55e', // Green
+    '#06b6d4', // Cyan
     '#3b82f6', // Blue
     '#6366f1', // Indigo
     '#8b5cf6', // Violet
     '#64748b'  // Slate
 ];
 
-// Initialization
+// Load Events & Initialize
 loadEvents();
+setMode('mobile'); // Always start in mobile mode
 renderCalendar();
-// Initialize Main Palette
+
+// Initialize Color Palettes
 renderColorPaletteWithLogic(colorPalette, eventColorInput);
-// Initialize Modal Palette
 const modalColorPalette = document.getElementById('modal-color-palette');
 if (modalColorPalette) {
     renderColorPaletteWithLogic(modalColorPalette, document.getElementById('edit-color'));
+}
+
+// Theme Toggle (checkbox)
+const themeToggleCheckbox = document.getElementById('theme-toggle-checkbox');
+if (themeToggleCheckbox) {
+    // Set initial state based on current theme
+    const isDark = !document.body.classList.contains('light-mode');
+    themeToggleCheckbox.checked = isDark;
+
+    themeToggleCheckbox.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            // Dark mode
+            document.body.classList.remove('light-mode');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            // Light mode
+            document.body.classList.add('light-mode');
+            localStorage.setItem('theme', 'light');
+        }
+    });
 }
 
 // Debug: Global click listener for mobile mode
@@ -103,13 +114,7 @@ function setMode(mode) {
     currentMode = mode;
     if (mode === 'mobile') {
         document.body.classList.add('mobile-simulator');
-        btnModeMobile.classList.add('active');
-        btnModeDesktop.classList.remove('active');
-        console.log(`Switched to Mobile Simulator`);
-    } else {
-        document.body.classList.remove('mobile-simulator');
-        btnModeDesktop.classList.add('active');
-        btnModeMobile.classList.remove('active');
+        console.log(`Mobile mode enabled`);
     }
     // Trigger resize to adjust calendar if needed
     window.dispatchEvent(new Event('resize'));
@@ -145,27 +150,11 @@ window.gisLoaded = gisLoaded;
 inputText.addEventListener('input', handleInputDebounce);
 inputText.addEventListener('keydown', handleInputKeydown);
 btnVoiceInput.addEventListener('click', handleVoiceInput);
-prevMonthBtn.addEventListener('click', () => changeMonth(-1));
-nextMonthBtn.addEventListener('click', () => changeMonth(1));
 btnOpenSync.addEventListener('click', handleSyncClick);
 
-// Mode & Theme Listeners
-if (btnModeDesktop) btnModeDesktop.addEventListener('click', () => setMode('desktop'));
-if (btnModeMobile) btnModeMobile.addEventListener('click', () => setMode('mobile'));
-
-if (btnThemeToggle) {
-    btnThemeToggle.addEventListener('click', () => {
-        if (currentTheme === 'dark') {
-            document.body.classList.add('light-mode');
-            btnThemeToggle.textContent = '☀️ Light';
-            currentTheme = 'light';
-        } else {
-            document.body.classList.remove('light-mode');
-            btnThemeToggle.textContent = '🌙 Dark';
-            currentTheme = 'dark';
-        }
-    });
-}
+// Navigation Buttons
+prevMonthBtn.addEventListener('click', () => changeMonth(-1));
+nextMonthBtn.addEventListener('click', () => changeMonth(1));
 
 // Modal Listeners
 closeModal.addEventListener('click', hideModal);
@@ -1354,14 +1343,12 @@ function renderCalendar() {
 // --- Palette Logic ---
 
 function renderColorPaletteWithLogic(container, inputElement) {
-    // Get recent colors from localStorage (max 7)
+    // Get recent colors from localStorage (max 5)
     let recentColors = JSON.parse(localStorage.getItem('recentColors') || '[]');
 
     // Ensure we have default colors if no recent colors
     const defaultColors = [
         '#ef4444', // Red
-        '#f97316', // Orange  
-        '#eab308', // Yellow
         '#22c55e', // Green
         '#3b82f6', // Blue
         '#8b5cf6', // Purple
@@ -1371,18 +1358,18 @@ function renderColorPaletteWithLogic(container, inputElement) {
     // Merge: recent colors first, then fill with defaults
     let displayColors = [...recentColors];
     for (const color of defaultColors) {
-        if (displayColors.length >= 7) break;
+        if (displayColors.length >= 5) break;
         if (!displayColors.includes(color)) {
             displayColors.push(color);
         }
     }
 
-    // Limit to 7 colors
-    displayColors = displayColors.slice(0, 7);
+    // Limit to 5 colors
+    displayColors = displayColors.slice(0, 5);
 
     container.innerHTML = '';
 
-    // Add 7 color dots
+    // Add 5 color dots
     displayColors.forEach(color => {
         const dot = document.createElement('div');
         dot.className = 'color-dot';
@@ -1395,27 +1382,25 @@ function renderColorPaletteWithLogic(container, inputElement) {
         container.appendChild(dot);
     });
 
-    // Add custom color picker dot (8th)
+    // Add custom color picker dot (6th)
     const customDot = document.createElement('div');
     customDot.className = 'color-dot custom-color';
     customDot.addEventListener('click', () => {
-        // Create temporary color input
-        const tempInput = document.createElement('input');
-        tempInput.type = 'color';
-        tempInput.value = inputElement.value || '#3b82f6';
-        tempInput.style.position = 'absolute';
-        tempInput.style.opacity = '0';
-        document.body.appendChild(tempInput);
+        // Trigger the actual color input (works better on mobile)
+        const colorInput = document.getElementById('event-color-input');
+        if (colorInput) {
+            // Set up one-time listener for color change
+            const handleColorChange = () => {
+                const selectedColor = colorInput.value;
+                inputElement.value = selectedColor;
+                saveRecentColor(selectedColor);
+                renderColorPaletteWithLogic(container, inputElement); // Refresh palette
+                colorInput.removeEventListener('change', handleColorChange);
+            };
 
-        tempInput.addEventListener('change', () => {
-            const selectedColor = tempInput.value;
-            inputElement.value = selectedColor;
-            saveRecentColor(selectedColor);
-            renderColorPaletteWithLogic(container, inputElement); // Refresh palette
-            document.body.removeChild(tempInput);
-        });
-
-        tempInput.click();
+            colorInput.addEventListener('change', handleColorChange);
+            colorInput.click();
+        }
     });
     container.appendChild(customDot);
 }
@@ -1429,8 +1414,8 @@ function saveRecentColor(color) {
     // Add to front
     recentColors.unshift(color);
 
-    // Keep only 7
-    recentColors = recentColors.slice(0, 7);
+    // Keep only 5
+    recentColors = recentColors.slice(0, 5);
 
     localStorage.setItem('recentColors', JSON.stringify(recentColors));
 }
