@@ -44,6 +44,7 @@ const SCOPES = 'https://www.googleapis.com/auth/calendar';
 // --- State Variables ---
 let currentMode = 'mobile'; // Always mobile mode
 let events = [];
+let deletedEvents = []; // Track deleted events for sync
 let currentDate = new Date();
 let currentlyOpenEvent = null;
 // OAuth

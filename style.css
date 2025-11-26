@@ -139,6 +139,23 @@ header {
     gap: 0.5rem;
 }
 
+/* Title Row */
+.title-row {
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+
+.title-row h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-color);
+}
+
+body.light-mode .title-row h2 {
+    color: #1e293b;
+}
+
 /* Row 1: Color Palette + Theme Toggle */
 .color-theme-row {
     display: flex;

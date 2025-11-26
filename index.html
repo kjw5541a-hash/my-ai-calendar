@@ -11,7 +11,7 @@
     <title>AI 캘린더 비서</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="style.css?v=23">
+    <link rel="stylesheet" href="style.css?v=24">
     <script src="lib/chrono.min.js"></script>
 </head>
 
@@ -23,6 +23,11 @@
     </div>
 
     <div class="container">
+        <!-- Title Row -->
+        <div class="title-row">
+            <h2>Google Calendar 동기화</h2>
+        </div>
+
         <!-- Row 1: Color Palette + Theme Toggle -->
         <div class="color-theme-row">
             <input type="color" id="event-color-input" value="#3b82f6" style="display: none;">
@@ -134,7 +139,7 @@
         </div>
 
         <!-- Scripts -->
-        <script src="app.js?v=23"></script>
+        <script src="app.js?v=24"></script>
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
         <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
 </body>
