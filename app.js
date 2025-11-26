@@ -1408,29 +1408,31 @@ function renderColorPaletteWithLogic(container, inputElement) {
     });
 
     // Add custom color picker dot (6th)
-    // We use a label for the hidden input to ensure mobile click works
-    const customLabel = document.createElement('label');
-    customLabel.className = 'color-dot custom-color';
-    customLabel.htmlFor = 'event-color-input'; // Links to the color input
+    const customDot = document.createElement('div');
+    customDot.className = 'color-dot custom-color';
 
-    // When color input changes, update the UI
-    const colorInput = document.getElementById('event-color-input');
-    if (colorInput) {
-        // Ensure input is technically visible but hidden from view for iOS
-        colorInput.style.display = 'block';
-        colorInput.style.visibility = 'hidden';
-        colorInput.style.position = 'absolute';
-        colorInput.style.left = '-9999px';
+    // Create the input element INSIDE the dot
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    colorInput.id = 'custom-color-picker-input';
+    // Style is handled in CSS to fill the parent
 
-        colorInput.addEventListener('change', (e) => {
-            const selectedColor = e.target.value;
-            inputElement.value = selectedColor;
-            saveRecentColor(selectedColor);
-            renderColorPaletteWithLogic(container, inputElement); // Refresh palette
-        });
-    }
+    colorInput.addEventListener('input', (e) => {
+        const selectedColor = e.target.value;
+        inputElement.value = selectedColor;
+        // We don't re-render immediately to avoid losing focus/state, 
+        // but we save it.
+    });
 
-    container.appendChild(customLabel);
+    colorInput.addEventListener('change', (e) => {
+        const selectedColor = e.target.value;
+        inputElement.value = selectedColor;
+        saveRecentColor(selectedColor);
+        renderColorPaletteWithLogic(container, inputElement); // Refresh to show as recent
+    });
+
+    customDot.appendChild(colorInput);
+    container.appendChild(customDot);
 }
 
 function saveRecentColor(color) {

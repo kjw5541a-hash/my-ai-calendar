@@ -1292,10 +1292,12 @@ body.mobile-simulator .calendar-section {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    padding: 1rem;
-    margin-top: 0.5rem;
-    overflow: hidden;
-    /* Prevent scroll */
+    padding: 0;
+    /* Remove padding to maximize width */
+    margin-top: 0.2rem;
+    overflow-y: auto;
+    /* Allow scroll if content (6 weeks) is too tall */
+    overflow-x: hidden;
 }
 
 body.mobile-simulator .calendar-header {
