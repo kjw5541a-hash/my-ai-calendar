@@ -1,3 +1,6 @@
+/* Fonts - Using Google Fonts for reliability */
+@import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+
 :root {
     /* Dark Theme (Default) */
     --bg-color: #0f172a;
@@ -39,13 +42,26 @@ body.mobile-simulator .container {
 }
 
 * {
-    box-sizing: border-box;
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Allow text selection for input elements */
+input,
+textarea {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
 }
 
 body {
-    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    font-family: 'Jua', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
     min-height: 100vh;
@@ -53,7 +69,6 @@ body {
     justify-content: center;
     align-items: center;
     overflow-x: hidden;
-    /* Prevent horizontal scroll */
     position: relative;
 }
 
@@ -166,6 +181,28 @@ body.light-mode .title-row h2 {
     height: 40px;
     margin-bottom: 0.5rem;
     padding: 0 1rem;
+}
+
+/* Date Picker Modal */
+.date-select {
+    width: 100%;
+    padding: 0.6rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: var(--text-color);
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.date-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+body.light-mode .date-select {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
 }
 
 /* Category Chips Row */
@@ -660,26 +697,27 @@ body.light-mode .calendar-day.today {
 
 .calendar-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.75rem;
 }
 
 .calendar-header h2 {
-    font-size: 1.5rem;
-    font-weight: 700;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.calendar-header h2:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .calendar-header button {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    color: white;
-    font-size: 1.2rem;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: background 0.2s;
+    display: none;
 }
 
 .calendar-header button:hover {
@@ -871,11 +909,14 @@ body.light-mode .calendar-day.today {
 }
 
 .modal-content {
-    background: rgba(30, 41, 59, 0.95);
+    background: rgba(30, 30, 50, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     padding: 1.5rem;
     border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     width: 90%;
-    max-width: 500px;
+    max-width: 400px;
     position: relative;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -1010,7 +1051,7 @@ body.light-mode .close:hover {
 .btn-sync-bottom {
     width: 100%;
     padding: 0.5rem;
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
     color: white;
     border: none;
     border-radius: 12px;
@@ -1018,12 +1059,13 @@ body.light-mode .close:hover {
     cursor: pointer;
     transition: all 0.3s;
     margin-top: 0.5rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 6px rgba(30, 64, 175, 0.3);
 }
 
 .btn-sync-bottom:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 6px 12px rgba(30, 64, 175, 0.4);
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
 }
 
 .btn {
@@ -1642,6 +1684,17 @@ body.mobile-simulator .modal-actions .btn {
 body.light-mode .day-detail-content {
     background: rgba(255, 255, 255, 0.98);
     border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.app-title {
+    font-family: 'Jua', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 #day-detail-date {

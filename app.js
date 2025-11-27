@@ -257,9 +257,49 @@ function handleVoiceButtonAction() {
     }
 }
 
-// Navigation Buttons
+// Month navigation
 prevMonthBtn.addEventListener('click', () => changeMonth(-1));
 nextMonthBtn.addEventListener('click', () => changeMonth(1));
+
+// Year/Month picker modal
+const datePickerModal = document.getElementById('date-picker-modal');
+const closeDatePickerBtn = document.getElementById('close-date-picker');
+const yearSelect = document.getElementById('year-select');
+const monthSelect = document.getElementById('month-select');
+const btnDatePickerApply = document.getElementById('btn-date-picker-apply');
+
+// Populate year select (current year ± 10 years)
+const currentYear = new Date().getFullYear();
+for (let year = currentYear - 10; year <= currentYear + 10; year++) {
+    const option = document.createElement('option');
+    option.value = year;
+    option.textContent = `${year}년`;
+    yearSelect.appendChild(option);
+}
+
+currentMonthYear.addEventListener('click', () => {
+    // Set current values
+    yearSelect.value = currentDate.getFullYear();
+    monthSelect.value = currentDate.getMonth();
+    datePickerModal.classList.remove('hidden');
+});
+
+if (closeDatePickerBtn) {
+    closeDatePickerBtn.addEventListener('click', () => {
+        datePickerModal.classList.add('hidden');
+    });
+}
+
+if (btnDatePickerApply) {
+    btnDatePickerApply.addEventListener('click', () => {
+        const selectedYear = parseInt(yearSelect.value);
+        const selectedMonth = parseInt(monthSelect.value);
+        currentDate.setFullYear(selectedYear);
+        currentDate.setMonth(selectedMonth);
+        renderCalendar();
+        datePickerModal.classList.add('hidden');
+    });
+}
 
 // Modal Listeners
 closeModal.addEventListener('click', hideModal);
@@ -785,10 +825,11 @@ function parseEventString(text) {
 
     // 1. Manual Keywords (Priority over Chrono for Date)
     if (!hasDate) {
-        // Check for "이번주/다음주 + 요일" patterns
-        const weekDayMatch = text.match(/(이번주|다음주)\s*(월|화|수|목|금|토|일)요일/);
+        // Check for "이번주/다음주 + 요일" patterns (with or without space)
+        const weekDayMatch = text.match(/(이번\s?주|다음\s?주)\s*(월|화|수|목|금|토|일)요일/);
         if (weekDayMatch) {
-            const isNextWeek = weekDayMatch[1] === '다음주';
+            const weekPart = weekDayMatch[1].replace(/\s/g, ''); // Remove spaces for comparison
+            const isNextWeek = weekPart === '다음주';
             const dayName = weekDayMatch[2];
             const dayMap = { '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6, '일': 0 };
             const targetDay = dayMap[dayName];

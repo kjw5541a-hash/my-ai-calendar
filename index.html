@@ -11,7 +11,7 @@
     <title>AI 캘린더 비서</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="style.css?v=44">
+    <link rel="stylesheet" href="style.css?v=52">
     <script src="lib/chrono.min.js"></script>
 </head>
 
@@ -171,8 +171,44 @@
             </div>
         </div>
 
+        <!-- Year/Month Picker Modal -->
+        <div id="date-picker-modal" class="modal hidden">
+            <div class="modal-content glass-container" style="max-width: 280px;">
+                <span id="close-date-picker" class="close">&times;</span>
+                <h2>날짜 선택</h2>
+
+                <div class="form-group">
+                    <label>년도</label>
+                    <select id="year-select" class="date-select">
+                        <!-- Years will be populated by JS -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>월</label>
+                    <select id="month-select" class="date-select">
+                        <option value="0">1월</option>
+                        <option value="1">2월</option>
+                        <option value="2">3월</option>
+                        <option value="3">4월</option>
+                        <option value="4">5월</option>
+                        <option value="5">6월</option>
+                        <option value="6">7월</option>
+                        <option value="7">8월</option>
+                        <option value="8">9월</option>
+                        <option value="9">10월</option>
+                        <option value="10">11월</option>
+                        <option value="11">12월</option>
+                    </select>
+                </div>
+
+                <button id="btn-date-picker-apply" class="btn btn-primary"
+                    style="width: 100%; margin-top: 1rem;">적용</button>
+            </div>
+        </div>
+
         <!-- Scripts -->
-        <script src="app.js?v=44"></script>
+        <script src="app.js?v=52"></script>
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
         <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
 </body>
