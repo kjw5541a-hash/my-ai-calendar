@@ -637,35 +637,9 @@ async function updateGoogleEvent(eventId, le) {
     });
 }
 
-function createGoogleEventResource(le) {
-    const start = le.isAllDay ? { date: formatDateForGoogleAllDay(le.start) } : { dateTime: le.start.toISOString() };
-
-    // Google Calendar's all-day events use exclusive end dates
-    // So we need to add 1 day to the end date for all-day events
-    let end;
-    if (le.isAllDay) {
-        const endDateForGoogle = new Date(le.end);
-        endDateForGoogle.setDate(endDateForGoogle.getDate() + 1);
-        end = { date: formatDateForGoogleAllDay(endDateForGoogle) };
-    } else {
-        end = { dateTime: le.end.toISOString() };
-    }
-
-    return {
-        'summary': `[AI] ${le.title}`,
-        'description': `${le.description || ''}\n\nUID:${le.uid}`, // Backup UID in description
-        'start': start,
-        'end': end,
-        'extendedProperties': {
-            'private': {
-                'uid': le.uid
-            }
-        }
-    };
-}
-
 function updateLocalEventFromGoogle(le, ge) {
-    le.title = ge.summary.replace('[AI] ', '');
+    // Remove both [AI] and 종일] prefixes
+    le.title = ge.summary.replace('[AI] ', '').replace('종일] ', '');
     le.description = ge.description ? ge.description.split('\n\nUID:')[0] : '';
     le.googleId = ge.id; // Ensure linked
 
@@ -699,7 +673,7 @@ function createLocalEventFromGoogle(ge) {
         id: Date.now().toString() + Math.random(),
         uid: uid,
         googleId: ge.id, // Important!
-        title: ge.summary.replace('[AI] ', ''),
+        title: ge.summary.replace('[AI] ', '').replace('종일] ', ''),
         description: ge.description ? ge.description.split('\n\nUID:')[0] : '',
         lastModified: new Date(ge.updated).getTime()
     };
@@ -1304,16 +1278,21 @@ function createGoogleEventResource(le) {
     const start = le.isAllDay ? { date: formatDateForGoogleAllDay(le.start) } : { dateTime: le.start.toISOString() };
 
     // Fix for Google Calendar All-Day End Date (Exclusive)
-    // Local app uses inclusive end date (e.g., 23:59:59). Google needs the NEXT day (00:00:00).
-    let endDateForGoogle = le.end;
+    // Google Calendar expects the end date to be the day AFTER the last day of the event
+    let end;
     if (le.isAllDay) {
-        endDateForGoogle = new Date(le.end.getTime() + 1000); // Add 1 second (or just > 1ms) to cross to next day
+        const endDateForGoogle = new Date(le.end);
+        endDateForGoogle.setDate(endDateForGoogle.getDate() + 1); // Add 1 day
+        end = { date: formatDateForGoogleAllDay(endDateForGoogle) };
+    } else {
+        end = { dateTime: le.end.toISOString() };
     }
 
-    const end = le.isAllDay ? { date: formatDateForGoogleAllDay(endDateForGoogle) } : { dateTime: le.end.toISOString() };
+    // Add 종일] prefix for all-day events
+    const title = le.isAllDay ? `종일] ${le.title}` : le.title;
 
     return {
-        'summary': le.title,
+        'summary': title,
         'description': `${le.description || ''}\n\nUID:${le.uid}`,
         'start': start,
         'end': end,
@@ -1374,7 +1353,7 @@ function createLocalEventFromGoogle(ge) {
         id: Date.now().toString() + Math.random(),
         uid: uid,
         googleId: ge.id,
-        title: ge.summary.replace(/^\[AI\]\s+/, ''), // Remove [AI] if present
+        title: ge.summary.replace(/^\[AI\]\s+/, '').replace(/^종일\]\s+/, ''), // Remove [AI] and 종일] if present
         description: ge.description ? ge.description.split('\n\nUID:')[0] : '',
         lastModified: new Date(ge.updated).getTime(),
         color: color
@@ -1553,6 +1532,54 @@ function renderCategoryChips(container, inputElement) {
             chip.classList.add('selected');
         });
 
+        // Long press to delete (except for default categories)
+        let pressTimer;
+        chip.addEventListener('touchstart', (e) => {
+            if (cat.id === 'etc') return; // Cannot delete 'etc'
+
+            pressTimer = setTimeout(() => {
+                // Count events using this category
+                const eventsWithCategory = events.filter(evt => evt.color === cat.color).length;
+
+                let message = `"${cat.label}" 카테고리를 삭제하시겠습니까?`;
+                if (eventsWithCategory > 0) {
+                    message += `\n\n이 카테고리를 사용하는 일정이 ${eventsWithCategory}개 있습니다.\n삭제 시 해당 일정들은 "기타" 카테고리로 변경됩니다.`;
+                }
+
+                if (confirm(message)) {
+                    // Update events to use 'etc' category
+                    const etcCategory = EVENT_CATEGORIES.find(c => c.id === 'etc');
+                    if (etcCategory) {
+                        events.forEach(evt => {
+                            if (evt.color === cat.color) {
+                                evt.color = etcCategory.color;
+                            }
+                        });
+                        saveEvents();
+                    }
+
+                    // Remove from EVENT_CATEGORIES
+                    const index = EVENT_CATEGORIES.findIndex(c => c.id === cat.id);
+                    if (index > -1) {
+                        EVENT_CATEGORIES.splice(index, 1);
+                        localStorage.setItem('customCategories', JSON.stringify(EVENT_CATEGORIES));
+                    }
+
+                    // Re-render chips
+                    renderCategoryChips(container, inputElement);
+                    renderCalendar();
+                }
+            }, 800); // 0.8 second long press
+        });
+
+        chip.addEventListener('touchend', () => {
+            clearTimeout(pressTimer);
+        });
+
+        chip.addEventListener('touchcancel', () => {
+            clearTimeout(pressTimer);
+        });
+
         container.appendChild(chip);
     });
 
@@ -1597,12 +1624,11 @@ function openCategoryModal(container, inputElement) {
     selectedCategoryColor = '';
     newCategoryNameInput.value = '';
 
-    // Show Step 1
-    categoryStep1.classList.remove('hidden');
-    categoryStep2.classList.add('hidden');
-
     categoryModal.classList.remove('hidden');
     newCategoryNameInput.focus();
+
+    // Render colors immediately (single-step modal)
+    renderRecommendedColors();
 }
 
 function closeCategoryModal() {
@@ -1611,31 +1637,15 @@ function closeCategoryModal() {
 
 if (closeCategoryModalBtn) closeCategoryModalBtn.addEventListener('click', closeCategoryModal);
 
-if (btnCategoryNext) {
-    btnCategoryNext.addEventListener('click', () => {
+// Remove old step navigation listeners (btnCategoryNext, btnCategoryBack are gone)
+
+if (btnCategorySave) {
+    btnCategorySave.addEventListener('click', () => {
         const name = newCategoryNameInput.value.trim();
         if (!name) {
             alert('카테고리 이름을 입력해주세요.');
             return;
         }
-        newCategoryName = name;
-
-        // Go to Step 2
-        categoryStep1.classList.add('hidden');
-        categoryStep2.classList.remove('hidden');
-        renderRecommendedColors();
-    });
-}
-
-if (btnCategoryBack) {
-    btnCategoryBack.addEventListener('click', () => {
-        categoryStep2.classList.add('hidden');
-        categoryStep1.classList.remove('hidden');
-    });
-}
-
-if (btnCategorySave) {
-    btnCategorySave.addEventListener('click', () => {
         if (!selectedCategoryColor) {
             alert('색상을 선택해주세요.');
             return;
@@ -1644,7 +1654,7 @@ if (btnCategorySave) {
         const newId = 'cat_' + Date.now();
         const newCategory = {
             id: newId,
-            label: newCategoryName,
+            label: name, // Use the name from input
             color: selectedCategoryColor,
             keywords: []
         };
