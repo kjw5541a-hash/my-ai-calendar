@@ -51,6 +51,9 @@ let currentlyOpenEvent = null;
 let gapiInited = false;
 let gisInited = false;
 let tokenClient;
+// Voice recognition
+let voiceRecognition = null;
+let isVoiceListening = false;
 
 const predefinedColors = [
     '#ef4444', // Red
@@ -64,24 +67,60 @@ const predefinedColors = [
     '#64748b'  // Slate
 ];
 
+// --- Category Logic (Moved to top for safety) ---
+const EVENT_CATEGORIES = [
+    { id: 'work', label: '업무', color: '#3b82f6', keywords: ['회의', '미팅', '보고', '출장', '워크샵', '업무', '프로젝트', '마감'] },
+    { id: 'personal', label: '개인', color: '#22c55e', keywords: ['약속', '저녁', '점심', '여행', '휴가', '데이트', '생일', '병원', '가족', '식사'] },
+    { id: 'exercise', label: '운동', color: '#f97316', keywords: ['헬스', '요가', '필라테스', '러닝', '산책', '축구', '운동', '수영', '등산'] },
+    { id: 'study', label: '공부', color: '#8b5cf6', keywords: ['공부', '스터디', '강의', '수업', '학원', '시험', '과제'] },
+    { id: 'etc', label: '기타', color: '#64748b', keywords: [] }
+];
+
+function predictCategory(text) {
+    if (!text) return EVENT_CATEGORIES[4]; // Default to 'etc'
+
+    for (const cat of EVENT_CATEGORIES) {
+        if (cat.id === 'etc') continue;
+        for (const keyword of cat.keywords) {
+            if (text.includes(keyword)) {
+                return cat;
+            }
+        }
+    }
+    return EVENT_CATEGORIES[4]; // Default to 'etc'
+}
+
 // Load Events & Initialize
 loadEvents();
 setMode('mobile'); // Always start in mobile mode
 renderCalendar();
 
 // Initialize Color Palettes
-renderColorPaletteWithLogic(colorPalette, eventColorInput);
+// Initialize Category Chips
+const categoryRow = document.getElementById('category-row');
+if (categoryRow) {
+    renderCategoryChips(categoryRow, eventColorInput);
+}
+
 const modalColorPalette = document.getElementById('modal-color-palette');
 if (modalColorPalette) {
-    renderColorPaletteWithLogic(modalColorPalette, document.getElementById('edit-color'));
+    renderCategoryChips(modalColorPalette, document.getElementById('edit-color'));
 }
 
 // Theme Toggle (checkbox)
 const themeToggleCheckbox = document.getElementById('theme-toggle-checkbox');
 if (themeToggleCheckbox) {
-    // Set initial state based on current theme
-    const isDark = !document.body.classList.contains('light-mode');
-    themeToggleCheckbox.checked = isDark;
+    // Default to Light Mode if no preference saved
+    const savedTheme = localStorage.getItem('theme');
+    const isLight = savedTheme !== 'dark'; // Default light
+
+    if (isLight) {
+        document.body.classList.add('light-mode');
+        themeToggleCheckbox.checked = false;
+    } else {
+        document.body.classList.remove('light-mode');
+        themeToggleCheckbox.checked = true;
+    }
 
     themeToggleCheckbox.addEventListener('change', (e) => {
         if (e.target.checked) {
@@ -153,7 +192,47 @@ inputText.addEventListener('input', (e) => {
     updateVoiceButtonState();
 });
 inputText.addEventListener('keydown', handleInputKeydown);
-btnVoiceInput.addEventListener('click', handleVoiceButtonAction); // Changed handler
+// Quick Add Button (new + button inside input)
+const btnQuickAdd = document.getElementById('btn-quick-add');
+if (btnQuickAdd) {
+    btnQuickAdd.addEventListener('click', handleQuickAdd);
+}
+
+// Voice Button - now triggers voice input directly
+if (btnVoiceInput) {
+    btnVoiceInput.addEventListener('click', handleVoiceInput);
+}
+
+// Swipe Navigation for Calendar
+const calendarSection = document.getElementById('calendar-section');
+if (calendarSection) {
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    calendarSection.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    calendarSection.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipe();
+    }, { passive: true });
+
+    function handleSwipe() {
+        const swipeThreshold = 50;
+        const diff = touchStartX - touchEndX;
+
+        if (Math.abs(diff) > swipeThreshold) {
+            if (diff > 0) {
+                // Swipe left - next month
+                changeMonth(1);
+            } else {
+                // Swipe right - previous month
+                changeMonth(-1);
+            }
+        }
+    }
+}
 btnOpenSync.addEventListener('click', handleSyncClick);
 
 function updateVoiceButtonState() {
@@ -251,11 +330,9 @@ function renderCalendar() {
     currentMonthYear.textContent = `${year}년 ${month + 1}월`;
     calendarGrid.innerHTML = '';
 
-    // First day of the month
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
 
-    // Days of week headers
     const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
     daysOfWeek.forEach(day => {
         const el = document.createElement('div');
@@ -267,20 +344,17 @@ function renderCalendar() {
         calendarGrid.appendChild(el);
     });
 
-    // Empty slots for previous month
     for (let i = 0; i < firstDay.getDay(); i++) {
         const el = document.createElement('div');
         el.className = 'calendar-day empty';
         calendarGrid.appendChild(el);
     }
 
-    // Days
     for (let i = 1; i <= lastDay.getDate(); i++) {
         const date = new Date(year, month, i);
         const el = document.createElement('div');
         el.className = 'calendar-day';
 
-        // Check if today
         const today = new Date();
         if (date.toDateString() === today.toDateString()) {
             el.classList.add('today');
@@ -291,11 +365,20 @@ function renderCalendar() {
         dayNum.textContent = i;
         el.appendChild(dayNum);
 
-        // Render events for this day
-        const dayEvents = events.filter(e => isSameDay(e.start, date));
+        // Filter events that overlap with this day
+        const dayStart = new Date(date);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(date);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        const dayEvents = events.filter(e => {
+            const eStart = new Date(e.start);
+            const eEnd = new Date(e.end);
+            return eStart <= dayEnd && eEnd >= dayStart;
+        });
 
         // Sort by time
-        dayEvents.sort((a, b) => a.start - b.start);
+        dayEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
 
         dayEvents.forEach(e => {
             const eventEl = document.createElement('div');
@@ -304,7 +387,7 @@ function renderCalendar() {
             // Time logic: Show time only if NOT all day
             let displayText = e.title;
             if (!e.isAllDay) {
-                const timeStr = e.start.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+                const timeStr = new Date(e.start).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
                 displayText = `${timeStr} ${e.title}`;
             }
             eventEl.style.background = `linear-gradient(135deg, ${e.color}22, ${e.color}44)`;
@@ -312,23 +395,20 @@ function renderCalendar() {
             eventEl.textContent = displayText;
             eventEl.title = displayText; // Tooltip
 
-            // Event click also opens Day Detail Modal (no stopPropagation)
-            eventEl.addEventListener('click', () => {
-                openDayDetailModal(date, dayEvents);
+            // Click to edit
+            eventEl.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                openModal(e);
             });
 
             el.appendChild(eventEl);
         });
 
-        // Click on day to show Day Detail Modal
-        el.addEventListener('click', (e) => {
-            console.log('[DEBUG] ========== CALENDAR DAY CLICKED ==========');
-            console.log('[DEBUG] Date:', date.toDateString());
-            console.log('[DEBUG] Current Mode:', currentMode);
-            console.log('[DEBUG] Event Target:', e.target);
-            console.log('[DEBUG] Event Current Target:', e.currentTarget);
-            console.log('[DEBUG] Number of events on this day:', dayEvents.length);
-            openDayDetailModal(date, dayEvents);
+        // Click on day to add event
+        el.addEventListener('click', () => {
+            const clickedDate = new Date(year, month, i);
+            const specificDayEvents = events.filter(e => isSameDay(e.start, clickedDate));
+            openDayDetailModal(clickedDate, specificDayEvents);
         });
 
         calendarGrid.appendChild(el);
@@ -642,7 +722,7 @@ function createLocalEventFromGoogle(ge) {
 
 // --- NLP & Input ---
 
-function parseText(text) {
+function parseEventString(text) {
     if (!text.trim()) return null;
 
     let results = [];
@@ -824,40 +904,54 @@ function parseText(text) {
         title = newTitle;
     }
 
-    // 4. Time Fallback (Regex)
+    // 4. Time Fallback (Regex) - Enhanced with '저녁' support
     if (!hasTime) {
-        // Check for "X시 반" pattern (e.g., "9시 반" = 9:30)
-        const halfHourMatch = text.match(/(오전|오후)?\s*(\d{1,2})\s*시\s*반/);
-        if (halfHourMatch) {
-            const ampm = halfHourMatch[1];
-            let hour = parseInt(halfHourMatch[2]);
-            const min = 30;
-
-            if (ampm === '오후' && hour < 12) hour += 12;
-            if (ampm === '오전' && hour === 12) hour = 0;
-
-            mergedDate.setHours(hour, min, 0, 0);
+        // Check for "저녁 X시" pattern (e.g., "저녁 5시" = 17:00)
+        const eveningMatch = text.match(/저녁\s*(\d{1,2})\s*시/);
+        if (eveningMatch) {
+            let hour = parseInt(eveningMatch[1]);
+            // Treat as PM
+            if (hour < 12) hour += 12;
+            mergedDate.setHours(hour, 0, 0, 0);
             hasTime = true;
             isAllDay = false;
-            matchedTimePatternText = halfHourMatch[0];
+            matchedTimePatternText = eveningMatch[0];
         } else {
-            const timeMatch = text.match(/(오전|오후)?\s*(\d{1,2})\s*시\s*(\d{1,2})?분?/) || text.match(/(\d{1,2}):(\d{2})/);
-            if (timeMatch) {
-                let hour, min = 0;
-                if (timeMatch[0].includes(':')) {
-                    hour = parseInt(timeMatch[1]);
-                    min = parseInt(timeMatch[2]);
-                } else {
-                    const ampm = timeMatch[1];
-                    hour = parseInt(timeMatch[2]);
-                    min = timeMatch[3] ? parseInt(timeMatch[3]) : 0;
-                    if (ampm === '오후' && hour < 12) hour += 12;
-                    if (ampm === '오전' && hour === 12) hour = 0;
-                }
+            // Check for "X시 반" pattern (e.g., "9시 반" = 9:30)
+            const halfHourMatch = text.match(/(오전|오후|저녁)?\s*(\d{1,2})\s*시\s*반/);
+            if (halfHourMatch) {
+                const ampm = halfHourMatch[1];
+                let hour = parseInt(halfHourMatch[2]);
+                const min = 30;
+
+                if (ampm === '오후' && hour < 12) hour += 12;
+                if (ampm === '저녁' && hour < 12) hour += 12;
+                if (ampm === '오전' && hour === 12) hour = 0;
+
                 mergedDate.setHours(hour, min, 0, 0);
                 hasTime = true;
                 isAllDay = false;
-                matchedTimePatternText = timeMatch[0];
+                matchedTimePatternText = halfHourMatch[0];
+            } else {
+                const timeMatch = text.match(/(오전|오후|저녁)?\s*(\d{1,2})\s*시\s*(\d{1,2})?분?/) || text.match(/(\d{1,2}):(\d{2})/);
+                if (timeMatch) {
+                    let hour, min = 0;
+                    if (timeMatch[0].includes(':')) {
+                        hour = parseInt(timeMatch[1]);
+                        min = parseInt(timeMatch[2]);
+                    } else {
+                        const ampm = timeMatch[1];
+                        hour = parseInt(timeMatch[2]);
+                        min = timeMatch[3] ? parseInt(timeMatch[3]) : 0;
+                        if (ampm === '오후' && hour < 12) hour += 12;
+                        if (ampm === '저녁' && hour < 12) hour += 12;
+                        if (ampm === '오전' && hour === 12) hour = 0;
+                    }
+                    mergedDate.setHours(hour, min, 0, 0);
+                    hasTime = true;
+                    isAllDay = false;
+                    matchedTimePatternText = timeMatch[0];
+                }
             }
         }
     }
@@ -897,7 +991,14 @@ function parseText(text) {
         finalEndDate = new Date(mergedDate.getTime() + (isAllDay ? 0 : 60 * 60 * 1000));
     }
 
-    return { title, start: mergedDate, end: finalEndDate, description: text, isAllDay };
+    // 4. Auto-classify Category
+    const predictedCategory = predictCategory(text);
+    let color = eventColorInput.value; // Default to current selection
+    if (predictedCategory) {
+        color = predictedCategory.color;
+    }
+
+    return { title, start: mergedDate, end: finalEndDate, description: text, isAllDay, color, categoryId: predictedCategory?.id };
 }
 
 function handleInputDebounce(e) {
@@ -908,21 +1009,36 @@ function handleInputDebounce(e) {
 }
 
 function handleInputPreview(e) {
-    const val = e.target.value;
-    if (!val.trim()) {
-        parsingFeedback.textContent = '';
+    const text = e.target.value;
+    if (!text.trim()) {
+        parsingFeedback.innerHTML = '';
+        parsingFeedback.classList.remove('show');
         return;
     }
 
-    const parsed = parseText(val);
-    if (parsed) {
-        const timeStr = parsed.isAllDay ? '(종일)' : parsed.start.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-        parsingFeedback.textContent = `💡 인식됨: ${parsed.start.toLocaleDateString('ko-KR')} ${timeStr} - ${parsed.title}`;
-        parsingFeedback.style.color = '#10b981';
+    const result = parseEventString(text);
+    if (result) {
+        // Update UI Color if category changed
+        if (result.color && result.categoryId) {
+            eventColorInput.value = result.color;
+            const categoryRow = document.getElementById('category-row');
+            if (categoryRow) {
+                const chip = Array.from(categoryRow.children).find(c => c.dataset.id === result.categoryId);
+                if (chip) updateSelectedChip(categoryRow, chip, result.color);
+            }
+        }
+
+        let feedbackHTML = `
+            <span class="badge badge-title">제목: ${result.title}</span>
+            <span class="badge badge-time">일시: ${formatDate(result.start)}</span>
+        `;
+        if (result.isAllDay) {
+            feedbackHTML += ` <span class="badge badge-time">(종일)</span>`;
+        }
+        parsingFeedback.innerHTML = feedbackHTML;
+        parsingFeedback.classList.add('show');
     } else {
-        // Debug info to help diagnose
-        parsingFeedback.innerHTML = `❓ 날짜를 찾을 수 없습니다.<br><span style="font-size:0.8em; color:#64748b">입력값: "${val}"</span>`;
-        parsingFeedback.style.color = '#94a3b8';
+        parsingFeedback.classList.remove('show');
     }
 }
 
@@ -942,7 +1058,7 @@ function handleQuickAdd() {
     const text = inputText.value;
     if (!text.trim()) return;
 
-    const parsed = parseText(text);
+    const parsed = parseEventString(text);
     const color = eventColorInput.value; // Get color
 
     if (parsed) {
@@ -957,7 +1073,7 @@ function handleQuickAdd() {
         events.push(newEvent);
         saveEvents();
         inputText.value = '';
-        parsingFeedback.textContent = '✅ 일정이 추가되었습니다!';
+        parsingFeedback.innerHTML = '<img src="success-icon.png" alt="Success" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"> 일정이 추가되었습니다!';
 
         // Move calendar to that date
         currentDate = new Date(parsed.start);
@@ -968,37 +1084,64 @@ function handleQuickAdd() {
 }
 
 function handleVoiceInput() {
-    if (!('webkitSpeechRecognition' in window)) {
-        alert('이 브라우저는 음성 인식을 지원하지 않습니다.');
+    // If already listening, stop it
+    if (isVoiceListening && voiceRecognition) {
+        console.log('[VOICE] Stopping voice recognition...');
+        voiceRecognition.stop();
+        isVoiceListening = false;
+        btnVoiceInput.classList.remove('listening');
+        inputText.placeholder = "일정 입력";
         return;
     }
 
-    const recognition = new webkitSpeechRecognition();
-    recognition.lang = 'ko-KR';
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    // Check browser support
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert('음성 인식을 지원하지 않는 브라우저입니다.');
+        return;
+    }
 
-    recognition.onstart = function () {
-        console.log('Voice recognition started');
-        btnVoiceInput.classList.add('listening');
-        inputText.placeholder = "듣고 있어요... 👂";
-    };
+    // Create new recognition instance
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    voiceRecognition = new SpeechRecognition();
+    voiceRecognition.lang = 'ko-KR';
+    voiceRecognition.continuous = false;
+    voiceRecognition.interimResults = false;
 
-    recognition.onend = function () {
-        console.log('Voice recognition ended');
-        btnVoiceInput.classList.remove('listening');
-        inputText.placeholder = "일정을 입력하세요 (예: 내일 점심 약속)";
-    };
+    // Start listening
+    isVoiceListening = true;
+    btnVoiceInput.classList.add('listening');
+    inputText.placeholder = "듣고 있어요... 👂";
+    console.log('[VOICE] Started listening...');
 
-    recognition.onresult = function (event) {
+    voiceRecognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
-        console.log('Recognized:', transcript);
+        console.log('[VOICE] Recognized:', transcript);
         inputText.value = transcript;
-        // Trigger input event to update UI and parse
         inputText.dispatchEvent(new Event('input'));
-        btnVoiceInput.style.opacity = '1';
-        btnVoiceInput.textContent = '🎤';
+        isVoiceListening = false;
+        btnVoiceInput.classList.remove('listening');
+        inputText.placeholder = "일정 입력";
     };
+
+    voiceRecognition.onerror = (event) => {
+        console.error('[VOICE] Error:', event.error);
+        isVoiceListening = false;
+        btnVoiceInput.classList.remove('listening');
+        inputText.placeholder = "일정 입력";
+        if (event.error !== 'aborted') {
+            alert('음성 인식 중 오류가 발생했습니다: ' + event.error);
+        }
+    };
+
+    voiceRecognition.onend = () => {
+        console.log('[VOICE] Ended listening');
+        isVoiceListening = false;
+        btnVoiceInput.classList.remove('listening');
+        inputText.placeholder = "일정 입력";
+        voiceRecognition = null;
+    };
+
+    voiceRecognition.start();
 }
 
 // --- Modal ---
@@ -1012,6 +1155,12 @@ function openModal(event) {
     editDesc.value = event.description || '';
     editColor.value = event.color || '#3b82f6'; // Set Color
     colorPreviewText.textContent = event.color || '#3b82f6';
+
+    // Render category chips in modal
+    const modalColorPalette = document.getElementById('modal-color-palette');
+    if (modalColorPalette) {
+        renderCategoryChips(modalColorPalette, editColor);
+    }
 
     // Ensure delete button is visible for existing events
     if (event.id) {
@@ -1367,72 +1516,196 @@ function renderCalendar() {
 }
 // --- Palette Logic ---
 
-function renderColorPaletteWithLogic(container, inputElement) {
-    // Get recent colors from localStorage (max 5)
-    let recentColors = JSON.parse(localStorage.getItem('recentColors') || '[]');
+// --- Category Logic ---
+// (Moved to top)
 
-    // Ensure we have default colors if no recent colors
-    const defaultColors = [
-        '#ef4444', // Red
-        '#22c55e', // Green
-        '#3b82f6', // Blue
-        '#8b5cf6', // Purple
-        '#ec4899'  // Pink
-    ];
-
-    // Merge: recent colors first, then fill with defaults
-    let displayColors = [...recentColors];
-    for (const color of defaultColors) {
-        if (displayColors.length >= 5) break;
-        if (!displayColors.includes(color)) {
-            displayColors.push(color);
-        }
-    }
-
-    // Limit to 5 colors
-    displayColors = displayColors.slice(0, 5);
-
+function renderCategoryChips(container, inputElement) {
     container.innerHTML = '';
 
-    // Add 5 color dots
-    displayColors.forEach(color => {
-        const dot = document.createElement('div');
-        dot.className = 'color-dot';
-        dot.style.backgroundColor = color;
-        dot.addEventListener('click', () => {
-            inputElement.value = color;
-            saveRecentColor(color);
-            updateSelectedDot(container, dot);
+    EVENT_CATEGORIES.forEach(cat => {
+        const chip = document.createElement('div');
+        chip.className = 'category-chip';
+        chip.textContent = cat.label;
+        chip.dataset.color = cat.color;
+        chip.dataset.id = cat.id;
+
+        // Always show the category color as background
+        chip.style.backgroundColor = cat.color;
+        chip.style.color = '#ffffff'; // White text for visibility
+
+        // Initial selection check - add border instead of changing background
+        if (inputElement && inputElement.value === cat.color) {
+            chip.classList.add('selected');
+        }
+
+        chip.addEventListener('click', (e) => {
+            console.log('[CATEGORY] Chip clicked:', cat.label, cat.color);
+            e.stopPropagation();
+
+            // Update input color
+            if (inputElement) {
+                inputElement.value = cat.color;
+                console.log('[CATEGORY] Updated input color to:', cat.color);
+            }
+
+            // Update UI - mark as selected
+            container.querySelectorAll('.category-chip').forEach(c => c.classList.remove('selected'));
+            chip.classList.add('selected');
         });
-        container.appendChild(dot);
+
+        container.appendChild(chip);
     });
 
-    // Add custom color picker dot (6th)
-    const customDot = document.createElement('div');
-    customDot.className = 'color-dot custom-color';
+    // Add "+" button
+    const addBtn = document.createElement('div');
+    addBtn.className = 'category-add-btn';
+    addBtn.textContent = '+';
+    addBtn.title = '새 카테고리 추가';
+    addBtn.addEventListener('click', () => openCategoryModal(container, inputElement));
+    container.appendChild(addBtn);
+}
 
-    // Create the input element INSIDE the dot
-    const colorInput = document.createElement('input');
-    colorInput.type = 'color';
-    colorInput.id = 'custom-color-picker-input';
-    // Style is handled in CSS to fill the parent
+// --- Category Creation Modal Logic ---
+const RECOMMENDED_COLORS = [
+    '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
+    '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
+    '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
+    '#ec4899', '#f43f5e', '#64748b', '#71717a', '#78716c'
+];
 
-    colorInput.addEventListener('input', (e) => {
-        const selectedColor = e.target.value;
-        inputElement.value = selectedColor;
-        // We don't re-render immediately to avoid losing focus/state, 
-        // but we save it.
+let newCategoryName = '';
+let selectedCategoryColor = '';
+let targetCategoryContainer = null;
+let targetColorInput = null;
+
+const categoryModal = document.getElementById('category-modal');
+const closeCategoryModalBtn = document.getElementById('close-category-modal');
+const categoryStep1 = document.getElementById('category-step-1');
+const categoryStep2 = document.getElementById('category-step-2');
+const newCategoryNameInput = document.getElementById('new-category-name');
+const btnCategoryNext = document.getElementById('btn-category-next');
+const btnCategoryBack = document.getElementById('btn-category-back');
+const btnCategorySave = document.getElementById('btn-category-save');
+const recommendedColorsGrid = document.getElementById('recommended-colors-grid');
+
+function openCategoryModal(container, inputElement) {
+    targetCategoryContainer = container;
+    targetColorInput = inputElement;
+
+    // Reset State
+    newCategoryName = '';
+    selectedCategoryColor = '';
+    newCategoryNameInput.value = '';
+
+    // Show Step 1
+    categoryStep1.classList.remove('hidden');
+    categoryStep2.classList.add('hidden');
+
+    categoryModal.classList.remove('hidden');
+    newCategoryNameInput.focus();
+}
+
+function closeCategoryModal() {
+    categoryModal.classList.add('hidden');
+}
+
+if (closeCategoryModalBtn) closeCategoryModalBtn.addEventListener('click', closeCategoryModal);
+
+if (btnCategoryNext) {
+    btnCategoryNext.addEventListener('click', () => {
+        const name = newCategoryNameInput.value.trim();
+        if (!name) {
+            alert('카테고리 이름을 입력해주세요.');
+            return;
+        }
+        newCategoryName = name;
+
+        // Go to Step 2
+        categoryStep1.classList.add('hidden');
+        categoryStep2.classList.remove('hidden');
+        renderRecommendedColors();
     });
+}
 
-    colorInput.addEventListener('change', (e) => {
-        const selectedColor = e.target.value;
-        inputElement.value = selectedColor;
-        saveRecentColor(selectedColor);
-        renderColorPaletteWithLogic(container, inputElement); // Refresh to show as recent
+if (btnCategoryBack) {
+    btnCategoryBack.addEventListener('click', () => {
+        categoryStep2.classList.add('hidden');
+        categoryStep1.classList.remove('hidden');
     });
+}
 
-    customDot.appendChild(colorInput);
-    container.appendChild(customDot);
+if (btnCategorySave) {
+    btnCategorySave.addEventListener('click', () => {
+        if (!selectedCategoryColor) {
+            alert('색상을 선택해주세요.');
+            return;
+        }
+
+        const newId = 'cat_' + Date.now();
+        const newCategory = {
+            id: newId,
+            label: newCategoryName,
+            color: selectedCategoryColor,
+            keywords: []
+        };
+        EVENT_CATEGORIES.push(newCategory);
+
+        // Save to localStorage
+        localStorage.setItem('customCategories', JSON.stringify(EVENT_CATEGORIES));
+
+        // Re-render chips
+        if (targetCategoryContainer && targetColorInput) {
+            renderCategoryChips(targetCategoryContainer, targetColorInput);
+
+            // Auto-select
+            setTimeout(() => {
+                const newChip = Array.from(targetCategoryContainer.children).find(c => c.dataset.id === newId);
+                if (newChip) {
+                    updateSelectedChip(targetCategoryContainer, newChip, selectedCategoryColor);
+                    targetColorInput.value = selectedCategoryColor;
+                }
+            }, 50);
+        }
+
+        closeCategoryModal();
+    });
+}
+
+function renderRecommendedColors() {
+    recommendedColorsGrid.innerHTML = '';
+
+    // Filter out used colors
+    const usedColors = EVENT_CATEGORIES.map(c => c.color.toLowerCase());
+
+    RECOMMENDED_COLORS.forEach(color => {
+        // Strictly exclude used colors
+        if (usedColors.includes(color.toLowerCase())) return;
+
+        const colorOption = document.createElement('div');
+        colorOption.className = 'color-option';
+        colorOption.style.backgroundColor = color;
+
+        colorOption.addEventListener('click', () => {
+            // Select logic
+            document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
+            colorOption.classList.add('selected');
+            selectedCategoryColor = color;
+        });
+
+        recommendedColorsGrid.appendChild(colorOption);
+    });
+}
+
+// Replaces old palette logic
+function renderColorPaletteWithLogic(container, inputElement) {
+    // Redirect to category chips if it's the main palette
+    if (container.id === 'category-row') {
+        renderCategoryChips(container, inputElement);
+    } else {
+        // Fallback for modal or other places if needed (or just use chips there too)
+        // For now, let's use chips everywhere for consistency
+        renderCategoryChips(container, inputElement);
+    }
 }
 
 function saveRecentColor(color) {
@@ -1716,7 +1989,3 @@ function deleteEventFromDetail(eventId) {
     const dayEvents = events.filter(e => isSameDay(e.start, selectedDetailDate));
     openDayDetailModal(selectedDetailDate, dayEvents);
 }
-// Update renderCalendar to add click listener
-// We need to find where renderCalendar creates .calendar-day and add listener
-// Since renderCalendar is huge, let's use a targeted replace or just append the logic if possible.
-// Actually, renderCalendar clears grid and rebuilds. We must modify renderCalendar.
