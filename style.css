@@ -1863,3 +1863,104 @@ body.mobile-simulator .btn-add-bottom {
 body.mobile-simulator .background-blobs {
     display: none;
 }
+/* --- New Input Row Layout --- */
+.input-row-new {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+    width: 100%;
+}
+
+.theme-toggle-wrapper {
+    flex-shrink: 0;
+}
+
+/* Adjust input wrapper to grow */
+.input-row-new .input-wrapper {
+    flex-grow: 1;
+    /* Reset width if previously set */
+    width: auto; 
+}
+
+/* --- Tabs --- */
+.tab-container {
+    display: flex;
+    width: 100%;
+    border: 2px solid var(--text-color);
+    margin-bottom: 1rem;
+    border-radius: 4px; /* Optional: slight rounding */
+    overflow: hidden;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    border-right: 2px solid var(--text-color);
+}
+
+.tab-btn:last-child {
+    border-right: none;
+}
+
+.tab-btn.active {
+    background: #dbeafe; /* Light blue */
+    color: #1e3a8a; /* Dark blue */
+}
+
+body.dark-mode .tab-btn.active {
+    background: #1e3a8a;
+    color: #dbeafe;
+}
+
+/* --- Event List View --- */
+.event-list-section {
+    width: 100%;
+    min-height: 300px;
+    border: 2px solid var(--text-color);
+    padding: 1rem;
+    background: var(--glass-bg);
+    overflow-y: auto;
+    max-height: 60vh;
+}
+
+.list-date-group {
+    margin-bottom: 1.5rem;
+}
+
+.list-date-header {
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-bottom: 3px solid var(--text-color);
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+.list-item {
+    display: flex;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 1rem;
+    color: var(--text-color);
+}
+
+.list-item-time {
+    width: 60px; /* Fixed width for alignment */
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+
+.list-item-title {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
