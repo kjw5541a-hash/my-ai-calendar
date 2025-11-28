@@ -11,7 +11,7 @@
     <title>AI 캘린더 비서</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="style.css?v=62">
+    <link rel="stylesheet" href="style.css?v=53">
     <script src="lib/chrono.min.js"></script>
 </head>
 
@@ -25,7 +25,7 @@
     <div class="container">
         <!-- Title Row -->
         <div class="title-row">
-            <h2>MANAGE SCHEDULE APP</h2>
+            <h2>나의 일정 등록App</h2>
         </div>
 
         <!-- Category Row (hidden on main) -->
@@ -35,25 +35,25 @@
 
         <input type="color" id="event-color-input" value="#3b82f6" style="display: none;">
 
-
-        <!-- Theme Toggle -->
-        <div class="color-theme-row">
+        <!-- Row 2: Theme Toggle + Input + Voice -->
+        <div class="input-row-new">
+            <!-- Theme Toggle (Left) -->
             <div class="theme-toggle-wrapper">
                 <label class="toggle-switch">
                     <input type="checkbox" id="theme-toggle-checkbox">
                     <span class="toggle-slider"></span>
                 </label>
             </div>
-        </div>
 
-        <!-- Input -->
-        <div class="input-row">
+            <!-- Input Wrapper (Center) -->
             <div class="input-wrapper">
                 <textarea id="input-text" placeholder="일정 입력"></textarea>
                 <button id="btn-quick-add" class="btn-icon btn-quick-add" title="일정 추가">
                     <span>+</span>
                 </button>
             </div>
+
+            <!-- Voice Button (Right) -->
             <button id="btn-voice-input" class="btn-icon btn-voice" title="음성 입력">
                 <img src="voice-icon.png" alt="음성 입력" class="voice-icon">
                 <span class="listening-indicator">듣는 중...</span>
@@ -68,7 +68,7 @@
             <button id="tab-list" class="tab-btn">일정목록</button>
         </div>
 
-        <!-- Calendar -->
+        <!-- Calendar View -->
         <section class="calendar-section" id="calendar-section">
             <div class="calendar-header">
                 <button id="prev-month">◀</button>
@@ -80,7 +80,7 @@
             </div>
         </section>
 
-        <!-- Event List -->
+        <!-- Event List View -->
         <section class="event-list-section hidden" id="event-list-section">
             <div id="event-list-container">
                 <!-- Events will be populated here -->
@@ -224,7 +224,7 @@
         </div>
 
         <!-- Scripts -->
-        <script src="app.js?v=62"></script>
+        <script src="app.js?v=53"></script>
         <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
         <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
 </body>

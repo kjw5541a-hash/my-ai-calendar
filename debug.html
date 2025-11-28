@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Debug Test</title>
+</head>
+
+<body>
+    <h1>JavaScript Debug Test</h1>
+    <div id="result"></div>
+
+    <script>
+        const resultDiv = document.getElementById('result');
+        try {
+            // Test if we can load app.js
+            const script = document.createElement('script');
+            script.src = 'app.js?v=54';
+            script.onerror = function () {
+                resultDiv.innerHTML = '<p style="color:red;">Failed to load app.js</p>';
+            };
+            script.onload = function () {
+                resultDiv.innerHTML = '<p style="color:green;">app.js loaded successfully!</p>';
+            };
+            document.head.appendChild(script);
+        } catch (e) {
+            resultDiv.innerHTML = '<p style="color:red;">Error: ' + e.message + '</p>';
+        }
+    </script>
+</body>
+
+</html>
