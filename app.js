@@ -258,8 +258,8 @@ function updateVoiceButtonState() {
 function handleVoiceButtonAction() {
     if (inputText.value.trim().length > 0) {
         // Add Mode
-        parseAndAddEvent();
-        inputText.value = '';
+        handleQuickAdd();
+        // inputText.value = ''; // handleQuickAdd clears it
         updateVoiceButtonState();
     } else {
         // Voice Mode
@@ -1100,11 +1100,15 @@ function handleQuickAdd() {
         events.push(newEvent);
         saveEvents();
         inputText.value = '';
-        parsingFeedback.innerHTML = '<img src="success-icon.png" alt="Success" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"> 일정이 추가되었습니다!';
+        parsingFeedback.innerHTML = '<span style="color: green; font-weight: bold;">일정 추가 완료!!</span>';
+        setTimeout(() => {
+            parsingFeedback.innerHTML = '';
+        }, 2000);
 
         // Move calendar to that date
         currentDate = new Date(parsed.start);
         renderCalendar();
+        if (typeof renderEventList === 'function') renderEventList();
     } else {
         alert("날짜를 인식하지 못했습니다.");
     }
@@ -1137,7 +1141,7 @@ function handleVoiceInput() {
     // Start listening
     isVoiceListening = true;
     btnVoiceInput.classList.add('listening');
-    inputText.placeholder = "듣고 있어요... 👂";
+    inputText.placeholder = ".....";
     console.log('[VOICE] Started listening...');
 
     voiceRecognition.onresult = (event) => {
@@ -1237,7 +1241,7 @@ function saveModalEvent() {
 
     // Remove [종일] prefix if present (we'll determine isAllDay separately)
     if (title.startsWith('[종일] ')) {
-        title = title.substring(6);
+        title = title.substring(5);
     }
 
     const start = new Date(editStart.value);
@@ -1284,6 +1288,7 @@ function deleteModalEvent() {
             }
             events = events.filter(e => e.id !== editingEventId);
             saveEvents();
+            if (typeof renderEventList === 'function') renderEventList();
             hideModal();
         }
     } else {
@@ -1977,12 +1982,46 @@ function renderEventList() {
     eventListContainer.innerHTML = '';
     const sortedEvents = [...events].sort((a, b) => a.start - b.start);
     const grouped = {};
+
     sortedEvents.forEach(e => {
-        const dateKey = e.start.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-        if (!grouped[dateKey]) grouped[dateKey] = [];
-        grouped[dateKey].push(e);
+        // Normalize start to 00:00
+        let current = new Date(e.start);
+        current.setHours(0, 0, 0, 0);
+
+        const end = new Date(e.end);
+
+        // Loop through each day
+        const tempDate = new Date(current);
+
+        // Special case: if start >= end (invalid?), show at least once
+        if (tempDate >= end) {
+            const dateKey = tempDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+            if (!grouped[dateKey]) grouped[dateKey] = [];
+            grouped[dateKey].push(e);
+        } else {
+            while (tempDate < end) {
+                const dateKey = tempDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+                if (!grouped[dateKey]) grouped[dateKey] = [];
+                grouped[dateKey].push(e);
+
+                // Next day
+                tempDate.setDate(tempDate.getDate() + 1);
+
+                // Safety break
+                if (tempDate - current > 365 * 24 * 60 * 60 * 1000) break; // > 1 year
+            }
+        }
     });
-    const sortedKeys = Object.keys(grouped).sort((a, b) => grouped[a][0].start - grouped[b][0].start);
+
+    const sortedKeys = Object.keys(grouped).sort((a, b) => {
+        const parseDate = (str) => {
+            const nums = str.match(/\d+/g);
+            if (!nums) return 0;
+            return new Date(nums[0], nums[1] - 1, nums[2]);
+        };
+        return parseDate(a) - parseDate(b);
+    });
+
     sortedKeys.forEach(dateStr => {
         const groupEl = document.createElement('div');
         groupEl.className = 'list-date-group';
@@ -1990,6 +2029,7 @@ function renderEventList() {
         headerEl.className = 'list-date-header';
         headerEl.textContent = dateStr.replace(/^\d{4}년\s/, '');
         groupEl.appendChild(headerEl);
+
         grouped[dateStr].forEach(e => {
             const itemEl = document.createElement('div');
             itemEl.className = 'list-item';
@@ -1999,7 +2039,35 @@ function renderEventList() {
 
             const timeEl = document.createElement('div');
             timeEl.className = 'list-item-time';
-            timeEl.textContent = e.isAllDay ? '종일' : e.start.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+            let timeText = '';
+            if (e.isAllDay) {
+                timeText = '종일';
+            } else {
+                // Parse dateStr to check if it's start or end day
+                const nums = dateStr.match(/\d+/g);
+                const currentDay = new Date(nums[0], nums[1] - 1, nums[2]);
+                const eventStart = new Date(e.start);
+                const eventEnd = new Date(e.end);
+
+                const isStartDay = isSameDay(currentDay, eventStart);
+                // For end day check, we need to be careful. 
+                // If event ends at 00:00 of next day, the loop stopped before that day.
+                // So we only see end day if it has time > 00:00.
+                const isEndDay = isSameDay(currentDay, eventEnd);
+
+                if (isStartDay && isEndDay) {
+                    timeText = eventStart.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+                } else if (isStartDay) {
+                    timeText = eventStart.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' ~';
+                } else if (isEndDay) {
+                    timeText = '~ ' + eventEnd.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+                } else {
+                    timeText = '종일';
+                }
+            }
+
+            timeEl.textContent = timeText;
             const titleEl = document.createElement('div');
             titleEl.className = 'list-item-title';
             titleEl.textContent = e.title;

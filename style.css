@@ -1,6 +1,20 @@
 /* Fonts - Using Google Fonts for reliability */
 @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
 
+@font-face {
+    font-family: 'BinggraeMelona';
+    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_twelve@1.0/BinggraeMelona.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'BinggraeMelona-Bold';
+    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_twelve@1.0/BinggraeMelona-Bold.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+}
+
 :root {
     /* Dark Theme (Default) */
     --bg-color: #0f172a;
@@ -61,7 +75,7 @@ textarea {
 }
 
 body {
-    font-family: 'Jua', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    font-family: 'BinggraeMelona', 'BinggraeMelona-Bold', 'HYHeadlineM', 'HY헤드라인M', 'Jua', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
     min-height: 100vh;
@@ -168,7 +182,7 @@ header {
     font-weight: 700;
     margin: 0;
     color: var(--text-color);
-    font-family: 'HYHeadlineM', 'HY헤드라인M', sans-serif;
+    font-family: 'BinggraeMelona', 'BinggraeMelona-Bold', sans-serif;
 }
 
 body.light-mode .title-row h2 {
@@ -685,11 +699,24 @@ body.light-mode .btn-icon-img:hover img {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    background: var(--calendar-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 0.5rem;
 }
 
 #event-list-container {
     flex: 1;
     overflow-y: auto;
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE/Edge */
+}
+
+#event-list-container::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari */
 }
 
 .calendar-day {
@@ -782,6 +809,7 @@ body.light-mode .calendar-header button:hover {
     font-size: 0.9rem;
     background: rgba(255, 255, 255, 0.05);
     color: var(--text-color);
+    font-family: 'BinggraeMelona', 'BinggraeMelona-Bold', sans-serif;
 }
 
 .calendar-day {
@@ -798,6 +826,7 @@ body.light-mode .calendar-header button:hover {
     flex-direction: column;
     transition: background 0.2s;
     cursor: pointer;
+    font-family: 'BinggraeMelona', 'BinggraeMelona-Bold', sans-serif;
     overflow: hidden;
     /* Prevent content from stretching cell */
 }
@@ -1935,7 +1964,7 @@ body.mobile-simulator .background-blobs {
     color: var(--text-color);
     font-size: 0.95rem;
     font-weight: 600;
-    font-family: 'HYHeadlineM', 'HY헤드라인M', sans-serif;
+    font-family: 'BinggraeMelona', 'BinggraeMelona-Bold', sans-serif;
     cursor: pointer;
     transition: background 0.2s, color 0.2s;
     border-right: 1px solid var(--glass-border);
