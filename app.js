@@ -29,6 +29,7 @@ const closeModal = document.getElementById('close-modal');
 const editTitle = document.getElementById('edit-title');
 const editStart = document.getElementById('edit-start');
 const editEnd = document.getElementById('edit-end');
+const editAllDay = document.getElementById('edit-all-day'); // New Checkbox
 const editDesc = document.getElementById('edit-desc');
 const editColor = document.getElementById('edit-color');
 const colorPreviewText = document.getElementById('color-preview-text');
@@ -329,6 +330,34 @@ closeModal.addEventListener('click', hideModal);
 if (modalBtnCancel) modalBtnCancel.addEventListener('click', hideModal); // Added listener for modalBtnCancel
 modalBtnSave.addEventListener('click', saveModalEvent);
 modalBtnDelete.addEventListener('click', deleteModalEvent);
+
+// All Day Checkbox Listener
+if (editAllDay) {
+    editAllDay.addEventListener('change', (e) => {
+        const isAllDay = e.target.checked;
+        toggleDateInputs(isAllDay);
+    });
+}
+
+function toggleDateInputs(isAllDay) {
+    const startVal = editStart.value;
+    const endVal = editEnd.value;
+
+    if (isAllDay) {
+        editStart.type = 'date';
+        editEnd.type = 'date';
+        // Strip time if present (YYYY-MM-DDTHH:mm -> YYYY-MM-DD)
+        if (startVal.includes('T')) editStart.value = startVal.split('T')[0];
+        if (endVal.includes('T')) editEnd.value = endVal.split('T')[0];
+    } else {
+        editStart.type = 'datetime-local';
+        editEnd.type = 'datetime-local';
+        // Add default time if missing (YYYY-MM-DD -> YYYY-MM-DDTHH:mm)
+        // User requested 00:00 for start
+        if (startVal && !startVal.includes('T')) editStart.value = startVal + 'T00:00';
+        if (endVal && !endVal.includes('T')) editEnd.value = endVal + 'T00:00';
+    }
+}
 
 // Close modal on background click
 modal.addEventListener('click', (e) => {
@@ -1223,6 +1252,11 @@ function openModal(event) {
         editTitle.value = event.title;
     }
 
+    // Set Checkbox
+    if (editAllDay) {
+        editAllDay.checked = event.isAllDay;
+    }
+
     // Format dates based on whether it's all-day or not
     if (event.isAllDay) {
         // For all-day events, show only date (no time)
@@ -1285,8 +1319,8 @@ function saveModalEvent() {
     const desc = editDesc.value;
     const color = editColor.value; // Get Color
 
-    // Detect all-day from input type
-    let isAllDay = (editStart.type === 'date');
+    // Detect all-day from checkbox
+    let isAllDay = editAllDay ? editAllDay.checked : (editStart.type === 'date');
 
     if (isAllDay) {
         // Force Local 00:00 for Start
