@@ -446,6 +446,7 @@ function renderCalendar() {
         const date = new Date(year, month, i);
         const el = document.createElement('div');
         el.className = 'calendar-day';
+        el.dataset.date = date.toISOString();
 
         const today = new Date();
         if (date.toDateString() === today.toDateString()) {
@@ -496,6 +497,9 @@ function renderCalendar() {
             });
 
             el.appendChild(eventEl);
+
+            // Initialize drag and drop
+            initDragAndDrop(eventEl, e, date);
         });
 
         // Click on day to add event
@@ -1257,6 +1261,20 @@ function openModal(event) {
         editAllDay.checked = event.isAllDay;
     }
 
+    // Set Reminder
+    if (editReminderEnabled) {
+        editReminderEnabled.checked = event.reminder && event.reminder.enabled;
+        if (event.reminder && event.reminder.enabled) {
+            currentReminderValue = {
+                days: event.reminder.days || 0,
+                hours: event.reminder.hours || 0,
+                minutes: event.reminder.minutes || 0
+            };
+        } else {
+            currentReminderValue = { days: 0, hours: 0, minutes: 0 };
+        }
+    }
+
     // Format dates based on whether it's all-day or not
     if (event.isAllDay) {
         // For all-day events, show only date (no time)
@@ -1346,6 +1364,13 @@ function saveModalEvent() {
             events[idx] = {
                 ...events[idx],
                 title, start, end, description: desc, isAllDay, color,
+                reminder: editReminderEnabled && editReminderEnabled.checked ? {
+                    enabled: true,
+                    days: currentReminderValue.days,
+                    hours: currentReminderValue.hours,
+                    minutes: currentReminderValue.minutes,
+                    sent: false
+                } : null,
                 lastModified: Date.now()
             };
         }
@@ -1355,6 +1380,13 @@ function saveModalEvent() {
             id: id,
             uid: `${id}@aicalendar`,
             title, start, end, description: desc, isAllDay, color,
+            reminder: editReminderEnabled && editReminderEnabled.checked ? {
+                enabled: true,
+                days: currentReminderValue.days,
+                hours: currentReminderValue.hours,
+                minutes: currentReminderValue.minutes,
+                sent: false
+            } : null,
             lastModified: Date.now()
         };
         events.push(newEvent);
@@ -2236,5 +2268,400 @@ function renderEventList() {
                 target.scrollIntoView({ behavior: 'auto', block: 'start' }); // Instant scroll
             }
         }, 0); // Immediate
+    }
+}
+
+// ===== REMINDER FEATURE =====
+
+// Reminder Elements
+const editReminderEnabled = document.getElementById('edit-reminder-enabled');
+const reminderPickerModal = document.getElementById('reminder-picker-modal');
+const closeReminderPicker = document.getElementById('close-reminder-picker');
+const dialDays = document.getElementById('dial-days');
+const dialHours = document.getElementById('dial-hours');
+const dialMinutes = document.getElementById('dial-minutes');
+const btnReminderSave = document.getElementById('btn-reminder-save');
+
+// Reminder state
+let currentReminderValue = { days: 0, hours: 0, minutes: 0 };
+
+// Initialize dial pickers
+function initializeDialPickers() {
+    // Days: 0-30
+    for (let i = 0; i <= 30; i++) {
+        const item = document.createElement('div');
+        item.className = 'dial-item';
+        item.textContent = i;
+        item.dataset.value = i;
+        dialDays.appendChild(item);
+    }
+
+    // Hours: 0-23
+    for (let i = 0; i <= 23; i++) {
+        const item = document.createElement('div');
+        item.className = 'dial-item';
+        item.textContent = i;
+        item.dataset.value = i;
+        dialHours.appendChild(item);
+    }
+
+    // Minutes: 0-59
+    for (let i = 0; i <= 59; i++) {
+        const item = document.createElement('div');
+        item.className = 'dial-item';
+        item.textContent = i;
+        item.dataset.value = i;
+        dialMinutes.appendChild(item);
+    }
+
+    // Add scroll listeners
+    dialDays.addEventListener('scroll', () => updateDialHighlight(dialDays));
+    dialHours.addEventListener('scroll', () => updateDialHighlight(dialHours));
+    dialMinutes.addEventListener('scroll', () => updateDialHighlight(dialMinutes));
+}
+
+function updateDialHighlight(dialElement) {
+    const items = dialElement.querySelectorAll('.dial-item');
+    const scrollTop = dialElement.scrollTop;
+    const centerPosition = scrollTop + dialElement.clientHeight / 2;
+
+    let closestItem = null;
+    let closestDistance = Infinity;
+
+    items.forEach(item => {
+        item.classList.remove('active');
+        const itemCenter = item.offsetTop + item.clientHeight / 2;
+        const distance = Math.abs(centerPosition - itemCenter);
+
+        if (distance < closestDistance) {
+            closestDistance = distance;
+            closestItem = item;
+        }
+    });
+
+    if (closestItem) {
+        closestItem.classList.add('active');
+    }
+}
+
+function setDialValue(dialElement, value) {
+    const items = dialElement.querySelectorAll('.dial-item');
+    const target = Array.from(items).find(item => parseInt(item.dataset.value) === value);
+
+    if (target) {
+        const scrollTop = target.offsetTop - dialElement.clientHeight / 2 + target.clientHeight / 2;
+        dialElement.scrollTop = scrollTop;
+        updateDialHighlight(dialElement);
+    }
+}
+
+function getDialValue(dialElement) {
+    const activeItem = dialElement.querySelector('.dial-item.active');
+    return activeItem ? parseInt(activeItem.dataset.value) : 0;
+}
+
+// Reminder checkbox listener
+if (editReminderEnabled) {
+    editReminderEnabled.addEventListener('change', async (e) => {
+        if (e.target.checked) {
+            // Request notification permission first
+            if (Notification.permission === 'default') {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    alert('알림 권한이 필요합니다. 브라우저 설정에서 알림을 허용해주세요.');
+                    e.target.checked = false;
+                    return;
+                }
+            } else if (Notification.permission === 'denied') {
+                alert('알림 권한이 거부되었습니다. 브라우저 설정에서 알림을 허용해주세요.');
+                e.target.checked = false;
+                return;
+            }
+
+            // Open picker modal
+            setDialValue(dialDays, currentReminderValue.days);
+            setDialValue(dialHours, currentReminderValue.hours);
+            setDialValue(dialMinutes, currentReminderValue.minutes);
+            reminderPickerModal.classList.remove('hidden');
+        }
+    });
+}
+
+// Close reminder picker
+if (closeReminderPicker) {
+    closeReminderPicker.addEventListener('click', () => {
+        reminderPickerModal.classList.add('hidden');
+        editReminderEnabled.checked = false;
+    });
+}
+
+// Save reminder
+if (btnReminderSave) {
+    btnReminderSave.addEventListener('click', () => {
+        currentReminderValue = {
+            days: getDialValue(dialDays),
+            hours: getDialValue(dialHours),
+            minutes: getDialValue(dialMinutes)
+        };
+        reminderPickerModal.classList.add('hidden');
+    });
+}
+
+// Notification checker - runs every minute
+function checkAndSendNotifications() {
+    const now = new Date().getTime();
+
+    events.forEach(event => {
+        if (!event.reminder || !event.reminder.enabled) return;
+        if (event.reminder.sent) return; // Already sent
+
+        const eventTime = new Date(event.start).getTime();
+        const reminderTime = eventTime - (
+            event.reminder.days * 24 * 60 * 60 * 1000 +
+            event.reminder.hours * 60 * 60 * 1000 +
+            event.reminder.minutes * 60 * 1000
+        );
+
+        // Check if it's time to send (within 1 minute range)
+        if (now >= reminderTime && now < reminderTime + 60000) {
+            sendNotification(event);
+            event.reminder.sent = true;
+            saveEvents();
+        }
+    });
+}
+
+function sendNotification(event) {
+    if (Notification.permission === 'granted') {
+        const timeStr = event.isAllDay ? '종일' : new Date(event.start).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+        new Notification('일정 알림', {
+            body: `${event.title}\n${timeStr}`,
+            icon: 'icon-192.png',
+            badge: 'icon-192.png'
+        });
+    }
+}
+
+// Start notification checker
+if (typeof Notification !== 'undefined') {
+    initializeDialPickers();
+    setInterval(checkAndSendNotifications, 60000); // Check every minute
+    checkAndSendNotifications(); // Check immediately on load
+}
+
+// Auto set end time to 1 hour after start time
+if (editStart) {
+    editStart.addEventListener('change', () => {
+        if (editStart.type === 'datetime-local' && editStart.value) {
+            const startDate = new Date(editStart.value);
+            if (!isNaN(startDate.getTime())) {
+                const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // +1 hour
+                editEnd.value = toLocalISOString(endDate).slice(0, 16);
+            }
+        }
+    });
+}
+
+// ===== DRAG AND DROP FUNCTIONALITY =====
+
+let dragState = {
+    isDragging: false,
+    draggedEvent: null,
+    draggedEventDot: null,
+    floatingClone: null,
+    originalDate: null,
+    currentDropTarget: null,
+    longPressTimer: null,
+    overlay: null
+};
+
+function initDragAndDrop(eventDot, event, dayDate) {
+    let startX = 0;
+    let startY = 0;
+    let hasMoved = false;
+
+    const handleStart = (e) => {
+        const touch = e.touches ? e.touches[0] : e;
+        startX = touch.clientX;
+        startY = touch.clientY;
+        hasMoved = false;
+
+        // Start long press timer
+        dragState.longPressTimer = setTimeout(() => {
+            if (!hasMoved) {
+                startDrag(eventDot, event, dayDate);
+            }
+        }, 500);
+    };
+
+    const handleMove = (e) => {
+        const touch = e.touches ? e.touches[0] : e;
+        const diffX = Math.abs(touch.clientX - startX);
+        const diffY = Math.abs(touch.clientY - startY);
+
+        if (diffX > 5 || diffY > 5) {
+            hasMoved = true;
+            clearTimeout(dragState.longPressTimer);
+        }
+
+        if (dragState.isDragging) {
+            e.preventDefault();
+            trackDrag(touch.clientX, touch.clientY);
+        }
+    };
+
+    const handleEnd = (e) => {
+        clearTimeout(dragState.longPressTimer);
+
+        if (dragState.isDragging) {
+            endDrag();
+        }
+    };
+
+    eventDot.addEventListener('touchstart', handleStart, { passive: false });
+    eventDot.addEventListener('mousedown', handleStart);
+
+    document.addEventListener('touchmove', handleMove, { passive: false });
+    document.addEventListener('mousemove', handleMove);
+
+    document.addEventListener('touchend', handleEnd);
+    document.addEventListener('mouseup', handleEnd);
+}
+
+function startDrag(eventDot, event, dayDate) {
+    dragState.isDragging = true;
+    dragState.draggedEvent = event;
+    dragState.draggedEventDot = eventDot;
+    dragState.originalDate = new Date(dayDate);
+
+    // Vibrate if available
+    if (navigator.vibrate) {
+        navigator.vibrate(50);
+    }
+
+    // Hide original (make semi-transparent)
+    eventDot.style.opacity = '0.3';
+
+    // Create floating clone
+    const clone = eventDot.cloneNode(true);
+    clone.className = 'event-dot dragging-clone';
+    clone.style.position = 'fixed';
+    clone.style.pointerEvents = 'none';
+    clone.style.zIndex = '1001';
+    clone.style.width = eventDot.offsetWidth + 'px';
+    clone.style.transform = 'scale(1.5)';
+    clone.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.3)';
+    clone.style.opacity = '0.9';
+
+    // Position at original location initially
+    const rect = eventDot.getBoundingClientRect();
+    clone.style.left = rect.left + 'px';
+    clone.style.top = rect.top + 'px';
+
+    document.body.appendChild(clone);
+    dragState.floatingClone = clone;
+
+    // Create overlay
+    dragState.overlay = document.createElement('div');
+    dragState.overlay.className = 'drag-overlay';
+    document.body.appendChild(dragState.overlay);
+
+    console.log('[DRAG] Started dragging:', event.title);
+}
+
+function trackDrag(x, y) {
+    // Move floating clone to follow pointer
+    if (dragState.floatingClone) {
+        dragState.floatingClone.style.left = (x - dragState.floatingClone.offsetWidth / 2) + 'px';
+        dragState.floatingClone.style.top = (y - dragState.floatingClone.offsetHeight / 2) + 'px';
+    }
+
+    // Find element under pointer
+    const elements = document.elementsFromPoint(x, y);
+    const dayElement = elements.find(el => el.classList.contains('calendar-day'));
+
+    // Clear previous drop target
+    if (dragState.currentDropTarget) {
+        dragState.currentDropTarget.classList.remove('drop-target');
+    }
+
+    // Set new drop target
+    if (dayElement && dayElement.dataset.date) {
+        dragState.currentDropTarget = dayElement;
+        dayElement.classList.add('drop-target');
+    } else {
+        dragState.currentDropTarget = null;
+    }
+}
+
+function endDrag() {
+    if (!dragState.isDragging) return;
+
+    // Restore original opacity
+    if (dragState.draggedEventDot) {
+        dragState.draggedEventDot.style.opacity = '';
+    }
+
+    // Remove floating clone
+    if (dragState.floatingClone) {
+        dragState.floatingClone.remove();
+    }
+
+    // Remove overlay
+    if (dragState.overlay) {
+        dragState.overlay.remove();
+    }
+
+    // Remove drop target highlight
+    if (dragState.currentDropTarget) {
+        dragState.currentDropTarget.classList.remove('drop-target');
+
+        // Change event date
+        const newDateStr = dragState.currentDropTarget.dataset.date;
+        if (newDateStr) {
+            const newDate = new Date(newDateStr);
+            changeEventDate(dragState.draggedEvent, newDate);
+        }
+    }
+
+    // Reset drag state
+    dragState = {
+        isDragging: false,
+        draggedEvent: null,
+        draggedEventDot: null,
+        floatingClone: null,
+        originalDate: null,
+        currentDropTarget: null,
+        longPressTimer: null,
+        overlay: null
+    };
+}
+
+function changeEventDate(event, newDate) {
+    const oldStart = new Date(event.start);
+    const oldEnd = new Date(event.end);
+
+    // Calculate time difference (for multi-day events)
+    const duration = oldEnd.getTime() - oldStart.getTime();
+
+    // Create new start date with same time
+    const newStart = new Date(newDate);
+    newStart.setHours(oldStart.getHours(), oldStart.getMinutes(), oldStart.getSeconds(), oldStart.getMilliseconds());
+
+    // Create new end date
+    const newEnd = new Date(newStart.getTime() + duration);
+
+    // Update event
+    const eventIndex = events.findIndex(e => e.id === event.id);
+    if (eventIndex !== -1) {
+        events[eventIndex].start = newStart;
+        events[eventIndex].end = newEnd;
+        events[eventIndex].lastModified = Date.now();
+
+        saveEvents();
+        renderCalendar();
+
+        console.log('[DRAG] Event moved from', oldStart, 'to', newStart);
     }
 }

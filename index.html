@@ -113,14 +113,20 @@
                 </div>
 
                 <div class="form-group">
-                    <div style="margin-bottom: 0.5rem;">
+                    <div
+                        style="margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
                         <label
-                            style="display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer; writing-mode: horizontal-tb;">
-                            <input type="checkbox" id="edit-all-day"> <span
+                            style="display: inline-flex; align-items: center; gap: 0.2rem; cursor: pointer; writing-mode: horizontal-tb;">
+                            <input type="checkbox" id="edit-all-day" style="width: 16px; height: 16px; margin: 0;"> <span
                                 style="writing-mode: horizontal-tb; white-space: nowrap; display: inline-block;">종일</span>
                         </label>
+                        <label
+                            style="display: inline-flex; align-items: center; gap: 0.2rem; cursor: pointer; writing-mode: horizontal-tb;">
+                            <input type="checkbox" id="edit-reminder-enabled" style="width: 16px; height: 16px; margin: 0;"> <span
+                                style="writing-mode: horizontal-tb; white-space: nowrap; display: inline-block;">미리알림</span>
+                        </label>
                     </div>
-                    <div class="date-range-inputs" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <div class="date-range-inputs" style="display: flex; flex-direction: column; gap: 0.5rem; padding: 0 0.5rem;">
                         <input type="datetime-local" id="edit-start" class="datetime-input" style="width: 100%;">
                         <input type="datetime-local" id="edit-end" class="datetime-input" style="width: 100%;">
                     </div>
@@ -227,12 +233,45 @@
                     style="width: 100%; margin-top: 1rem;">적용</button>
             </div>
         </div>
+    </div>
 
-        <!-- Scripts -->
-        <script src="app.js?v=67"></script>
+    <!-- Reminder Time Picker Modal -->
+    <div id="reminder-picker-modal" class="modal hidden">
+        <div class="modal-content glass-container" style="max-width: 320px;">
+            <span id="close-reminder-picker" class="close">&times;</span>
+            <h2>미리알림 설정</h2>
 
-        <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
-        <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
+            <div class="dial-picker-container">
+                <div class="dial-column">
+                    <div class="dial-label">일</div>
+                    <div class="dial-scroll" id="dial-days">
+                        <!-- 0-30일 -->
+                    </div>
+                </div>
+                <div class="dial-column">
+                    <div class="dial-label">시</div>
+                    <div class="dial-scroll" id="dial-hours">
+                        <!-- 0-23시 -->
+                    </div>
+                </div>
+                <div class="dial-column">
+                    <div class="dial-label">분</div>
+                    <div class="dial-scroll" id="dial-minutes">
+                        <!-- 0, 15, 30, 45분 -->
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-reminder-save" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">저장</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <!-- Scripts -->
+    <script src="app.js?v=67"></script>
+
+    <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
 </body>
 
 </html>

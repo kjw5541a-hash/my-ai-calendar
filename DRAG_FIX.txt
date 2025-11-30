@@ -1,0 +1,165 @@
+===============================================
+드래그 앤 드롭 개선 패치
+===============================================
+
+app.js 파일에서 아래 3개 함수를 찾아서 교체하세요.
+
+검색 방법: Ctrl+F (또는 Cmd+F)로 "function startDrag" 검색
+
+===============================================
+1. startDrag 함수 교체
+===============================================
+
+기존 함수 찾기: "function startDrag(eventDot, event, dayDate) {"
+
+아래 코드로 전체 교체:
+
+function startDrag(eventDot, event, dayDate) {
+    dragState.isDragging = true;
+    dragState.draggedEvent = event;
+    dragState.draggedEventDot = eventDot;
+    dragState.originalDate = new Date(dayDate);
+    
+    // Vibrate if available
+    if (navigator.vibrate) {
+        navigator.vibrate(50);
+    }
+    
+    // Hide original (make semi-transparent)
+    eventDot.style.opacity = '0.3';
+    
+    // Create floating clone
+    const clone = eventDot.cloneNode(true);
+    clone.className = 'event-dot dragging-clone';
+    clone.style.position = 'fixed';
+    clone.style.pointerEvents = 'none';
+    clone.style.zIndex = '1001';
+    clone.style.width = eventDot.offsetWidth + 'px';
+    clone.style.transform = 'scale(1.5)';
+    clone.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.3)';
+    clone.style.opacity = '0.9';
+    
+    // Position at original location initially
+    const rect = eventDot.getBoundingClientRect();
+    clone.style.left = rect.left + 'px';
+    clone.style.top = rect.top + 'px';
+    
+    document.body.appendChild(clone);
+    dragState.floatingClone = clone;
+    
+    // Create overlay
+    dragState.overlay = document.createElement('div');
+    dragState.overlay.className = 'drag-overlay';
+    document.body.appendChild(dragState.overlay);
+    
+    console.log('[DRAG] Started dragging:', event.title);
+}
+
+===============================================
+2. trackDrag 함수 교체
+===============================================
+
+기존 함수 찾기: "function trackDrag(x, y) {"
+
+아래 코드로 전체 교체:
+
+function trackDrag(x, y) {
+    // Move floating clone to follow pointer
+    if (dragState.floatingClone) {
+        dragState.floatingClone.style.left = (x - dragState.floatingClone.offsetWidth / 2) + 'px';
+        dragState.floatingClone.style.top = (y - dragState.floatingClone.offsetHeight / 2) + 'px';
+    }
+    
+    // Find element under pointer
+    const elements = document.elementsFromPoint(x, y);
+    const dayElement = elements.find(el => el.classList.contains('calendar-day'));
+    
+    // Clear previous drop target
+    if (dragState.currentDropTarget) {
+        dragState.currentDropTarget.classList.remove('drop-target');
+    }
+    
+    // Set new drop target
+    if (dayElement && dayElement.dataset.date) {
+        dragState.currentDropTarget = dayElement;
+        dayElement.classList.add('drop-target');
+    } else {
+        dragState.currentDropTarget = null;
+    }
+}
+
+===============================================
+3. endDrag 함수 교체
+===============================================
+
+기존 함수 찾기: "function endDrag() {"
+
+아래 코드로 전체 교체:
+
+function endDrag() {
+    if (!dragState.isDragging) return;
+    
+    // Restore original opacity
+    if (dragState.draggedEventDot) {
+        dragState.draggedEventDot.style.opacity = '';
+    }
+    
+    // Remove floating clone
+    if (dragState.floatingClone) {
+        dragState.floatingClone.remove();
+    }
+    
+    // Remove overlay
+    if (dragState.overlay) {
+        dragState.overlay.remove();
+    }
+    
+    // Remove drop target highlight
+    if (dragState.currentDropTarget) {
+        dragState.currentDropTarget.classList.remove('drop-target');
+        
+        // Change event date
+        const newDateStr = dragState.currentDropTarget.dataset.date;
+        if (newDateStr) {
+            const newDate = new Date(newDateStr);
+            changeEventDate(dragState.draggedEvent, newDate);
+        }
+    }
+    
+    // Reset drag state
+    dragState = {
+        isDragging: false,
+        draggedEvent: null,
+        draggedEventDot: null,
+        floatingClone: null,
+        originalDate: null,
+        currentDropTarget: null,
+        longPressTimer: null,
+        overlay: null
+    };
+}
+
+===============================================
+4. dragState 초기화 부분 수정 (선택사항)
+===============================================
+
+"let dragState = {" 를 찾아서 floatingClone 속성 추가:
+
+let dragState = {
+    isDragging: false,
+    draggedEvent: null,
+    draggedEventDot: null,
+    floatingClone: null,        // 이 줄 추가!
+    originalDate: null,
+    currentDropTarget: null,
+    longPressTimer: null,
+    overlay: null
+};
+
+===============================================
+완료!
+===============================================
+
+파일 저장 후 브라우저 새로고침(F5)하시면 됩니다.
+
+이제 드래그 시 일정이 달력 위로 떠서 손가락/마우스를 따라다닙니다!

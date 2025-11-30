@@ -2089,3 +2089,123 @@ body.light-mode .list-item:hover {
     text-overflow: ellipsis;
     font-weight: 500;
 }
+/* Dial Picker Styles */
+.dial-picker-container {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-around;
+    margin: 1.5rem 0;
+    height: 180px;
+}
+
+.dial-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+}
+
+.dial-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+
+.dial-scroll {
+    width: 100%;
+    height: 150px;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    position: relative;
+    scrollbar-width: none;
+}
+
+.dial-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.dial-item {
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    scroll-snap-align: center;
+    color: var(--text-color);
+    opacity: 0.4;
+    transition: all 0.2s;
+}
+
+.dial-item.active {
+    opacity: 1;
+    font-weight: bold;
+    font-size: 1.4rem;
+    color: var(--primary-color);
+}
+
+body.light-mode .dial-scroll {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.dial-scroll::before,
+.dial-scroll::after {
+    content: '';
+    position: sticky;
+    left: 0;
+    width: 100%;
+    height: 32px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.dial-scroll::before {
+    top: 0;
+    background: linear-gradient(180deg, var(--glass-bg) 0%, transparent 100%);
+}
+
+.dial-scroll::after {
+    bottom: 0;
+    background: linear-gradient(0deg, var(--glass-bg) 0%, transparent 100%);
+}
+
+/* Drag and Drop Styles */
+.event-dot {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.event-dot.dragging {
+    transform: scale(1.5);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    opacity: 0.9;
+}
+
+.calendar-day.drop-target {
+    background: rgba(59, 130, 246, 0.2);
+    border: 2px dashed var(--primary-color);
+    animation: pulse-drop 0.5s infinite;
+}
+
+@keyframes pulse-drop {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.drag-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.1);
+    z-index: 999;
+    pointer-events: none;
+}
+
+body.light-mode .calendar-day.drop-target {
+    background: rgba(59, 130, 246, 0.15);
+}
