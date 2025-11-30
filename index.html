@@ -11,6 +11,9 @@
     <title>AI 캘린더 비서</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=67">
     <script src="lib/chrono.min.js"></script>
 </head>
@@ -25,7 +28,7 @@
     <div class="container">
         <!-- Title Row -->
         <div class="title-row">
-            <h2>MANAGE SCHEDULE APP</h2>
+            <h2 id="app-title">MANAGE SCHEDULE APP</h2>
         </div>
 
         <!-- Category Row (hidden on main) -->
@@ -117,16 +120,19 @@
                         style="margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
                         <label
                             style="display: inline-flex; align-items: center; gap: 0.2rem; cursor: pointer; writing-mode: horizontal-tb;">
-                            <input type="checkbox" id="edit-all-day" style="width: 16px; height: 16px; margin: 0;"> <span
+                            <input type="checkbox" id="edit-all-day" style="width: 16px; height: 16px; margin: 0;">
+                            <span
                                 style="writing-mode: horizontal-tb; white-space: nowrap; display: inline-block;">종일</span>
                         </label>
                         <label
                             style="display: inline-flex; align-items: center; gap: 0.2rem; cursor: pointer; writing-mode: horizontal-tb;">
-                            <input type="checkbox" id="edit-reminder-enabled" style="width: 16px; height: 16px; margin: 0;"> <span
+                            <input type="checkbox" id="edit-reminder-enabled"
+                                style="width: 16px; height: 16px; margin: 0;"> <span
                                 style="writing-mode: horizontal-tb; white-space: nowrap; display: inline-block;">미리알림</span>
                         </label>
                     </div>
-                    <div class="date-range-inputs" style="display: flex; flex-direction: column; gap: 0.5rem; padding: 0 0.5rem;">
+                    <div class="date-range-inputs"
+                        style="display: flex; flex-direction: column; gap: 0.5rem; padding: 0 0.5rem;">
                         <input type="datetime-local" id="edit-start" class="datetime-input" style="width: 100%;">
                         <input type="datetime-local" id="edit-end" class="datetime-input" style="width: 100%;">
                     </div>

@@ -177,12 +177,19 @@ header {
     margin-top: 0;
 }
 
+@font-face {
+    font-family: 'BMJUA';
+    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/BMJUA.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
 .title-row h2 {
     font-size: 1.6rem;
     font-weight: 700;
     margin: 0;
     color: var(--text-color);
-    font-family: 'BinggraeMelona', 'BinggraeMelona-Bold', sans-serif;
+    font-family: 'BMJUA', 'Jua', sans-serif;
 }
 
 body.light-mode .title-row h2 {
@@ -2089,6 +2096,7 @@ body.light-mode .list-item:hover {
     text-overflow: ellipsis;
     font-weight: 500;
 }
+
 /* Dial Picker Styles */
 .dial-picker-container {
     display: flex;
@@ -2122,6 +2130,8 @@ body.light-mode .list-item:hover {
     border: 1px solid var(--glass-border);
     position: relative;
     scrollbar-width: none;
+    padding-block: calc((150px - 32px) / 2);
+    /* Center first/last items */
 }
 
 .dial-scroll::-webkit-scrollbar {
@@ -2191,8 +2201,15 @@ body.light-mode .dial-scroll {
 }
 
 @keyframes pulse-drop {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
 }
 
 .drag-overlay {

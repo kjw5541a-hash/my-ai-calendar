@@ -16,6 +16,40 @@ const prevMonthBtn = document.getElementById('prev-month');
 const nextMonthBtn = document.getElementById('next-month');
 const btnOpenSync = document.getElementById('btn-open-sync');
 const calendarSection = document.getElementById('calendar-section');
+const appTitle = document.getElementById('app-title');
+
+// Load saved title
+if (appTitle) {
+    const savedTitle = localStorage.getItem('app_title');
+    if (savedTitle) {
+        appTitle.textContent = savedTitle;
+    }
+
+    // Long press to change title
+    let pressTimer;
+
+    const startPress = (e) => {
+        pressTimer = setTimeout(() => {
+            const newTitle = prompt("새로운 앱 제목을 입력하세요:", appTitle.textContent);
+            if (newTitle) {
+                appTitle.textContent = newTitle;
+                localStorage.setItem('app_title', newTitle);
+            }
+        }, 800); // 800ms for long press
+    };
+
+    const cancelPress = () => {
+        clearTimeout(pressTimer);
+    };
+
+    appTitle.addEventListener('mousedown', startPress);
+    appTitle.addEventListener('touchstart', startPress, { passive: true });
+
+    appTitle.addEventListener('mouseup', cancelPress);
+    appTitle.addEventListener('mouseleave', cancelPress);
+    appTitle.addEventListener('touchend', cancelPress);
+    appTitle.addEventListener('touchmove', cancelPress);
+}
 
 // Tab Elements
 const tabCalendar = document.getElementById('tab-calendar');
