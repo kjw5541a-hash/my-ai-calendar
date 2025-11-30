@@ -75,13 +75,26 @@ const predefinedColors = [
 ];
 
 // --- Category Logic (Moved to top for safety) ---
-const EVENT_CATEGORIES = [
+let EVENT_CATEGORIES = [
     { id: 'work', label: '업무', color: '#3b82f6', keywords: ['회의', '미팅', '보고', '출장', '워크샵', '업무', '프로젝트', '마감'] },
     { id: 'personal', label: '개인', color: '#22c55e', keywords: ['약속', '저녁', '점심', '여행', '휴가', '데이트', '생일', '병원', '가족', '식사'] },
     { id: 'exercise', label: '운동', color: '#f97316', keywords: ['헬스', '요가', '필라테스', '러닝', '산책', '축구', '운동', '수영', '등산'] },
     { id: 'study', label: '공부', color: '#8b5cf6', keywords: ['공부', '스터디', '강의', '수업', '학원', '시험', '과제'] },
     { id: 'etc', label: '기타', color: '#64748b', keywords: [] }
 ];
+
+// Load custom categories from localStorage
+const storedCategories = localStorage.getItem('customCategories');
+if (storedCategories) {
+    try {
+        const parsed = JSON.parse(storedCategories);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            EVENT_CATEGORIES = parsed;
+        }
+    } catch (e) {
+        console.error("Failed to load categories", e);
+    }
+}
 
 function predictCategory(text) {
     if (!text) return EVENT_CATEGORIES[4]; // Default to 'etc'
@@ -459,7 +472,17 @@ function renderCalendar() {
         // Click on day to add event
         el.addEventListener('click', () => {
             const clickedDate = new Date(year, month, i);
-            const specificDayEvents = events.filter(e => isSameDay(e.start, clickedDate));
+            // Fix: Check for overlap instead of just start date
+            const clickedDayStart = new Date(clickedDate);
+            clickedDayStart.setHours(0, 0, 0, 0);
+            const clickedDayEnd = new Date(clickedDate);
+            clickedDayEnd.setHours(23, 59, 59, 999);
+
+            const specificDayEvents = events.filter(e => {
+                const eStart = new Date(e.start);
+                const eEnd = new Date(e.end);
+                return eStart <= clickedDayEnd && eEnd >= clickedDayStart;
+            });
             openDayDetailModal(clickedDate, specificDayEvents);
         });
 
@@ -542,15 +565,18 @@ async function syncWithGoogle() {
             saveEvents(); // Save cleaned up deletions
         }
 
-        // 1. Fetch Google Events (next 1 year)
+        // 1. Fetch Google Events (1 month past ~ 1 year future)
         const now = new Date();
-        const nextYear = new Date(now);
-        nextYear.setFullYear(now.getFullYear() + 1);
+        const syncStart = new Date(now);
+        syncStart.setMonth(now.getMonth() - 1); // 1 month ago
+
+        const syncEnd = new Date(now);
+        syncEnd.setFullYear(now.getFullYear() + 1); // 1 year future
 
         const response = await gapi.client.calendar.events.list({
             'calendarId': 'primary',
-            'timeMin': now.toISOString(),
-            'timeMax': nextYear.toISOString(),
+            'timeMin': syncStart.toISOString(),
+            'timeMax': syncEnd.toISOString(),
             'showDeleted': true, // Fetch deleted events too
             'singleEvents': true,
             'maxResults': 2500
@@ -584,6 +610,15 @@ async function syncWithGoogle() {
         // A. Process Local Events -> Google
         for (let i = 0; i < events.length; i++) {
             const le = events[i];
+
+            // Check if local event is within sync window
+            // Google list logic: Include if end >= timeMin AND start < timeMax
+            const leStart = new Date(le.start);
+            const leEnd = new Date(le.end);
+
+            if (leEnd < syncStart || leStart >= syncEnd) {
+                continue; // Outside sync window, skip to prevent duplication/deletion errors
+            }
 
             // Try to find match: 1. googleId, 2. uid
             let ge = null;
@@ -1192,10 +1227,11 @@ function openModal(event) {
     if (event.isAllDay) {
         // For all-day events, show only date (no time)
         const startDate = new Date(event.start);
+        const endDate = new Date(event.end); // Use event.end
         editStart.type = 'date';
         editEnd.type = 'date';
         editStart.value = toLocalISOString(startDate).slice(0, 10); // yyyy-MM-dd
-        editEnd.value = toLocalISOString(startDate).slice(0, 10);
+        editEnd.value = toLocalISOString(endDate).slice(0, 10);
     } else {
         // For timed events, show full datetime
         editStart.type = 'datetime-local';
@@ -1251,6 +1287,24 @@ function saveModalEvent() {
 
     // Detect all-day from input type
     let isAllDay = (editStart.type === 'date');
+
+    if (isAllDay) {
+        // Force Local 00:00 for Start
+        const sVal = editStart.value; // yyyy-mm-dd
+        if (sVal) {
+            const parts = sVal.split('-');
+            start.setFullYear(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            start.setHours(0, 0, 0, 0);
+        }
+
+        // Force Local 23:59 for End
+        const eVal = editEnd.value; // yyyy-mm-dd
+        if (eVal) {
+            const parts = eVal.split('-');
+            end.setFullYear(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            end.setHours(23, 59, 59, 999);
+        }
+    }
 
     if (editingEventId) {
         const idx = events.findIndex(e => e.id === editingEventId);
@@ -1359,8 +1413,8 @@ function createGoogleEventResource(le) {
         end = { dateTime: le.end.toISOString() };
     }
 
-    // Add 종일] prefix for all-day events
-    const title = le.isAllDay ? `종일] ${le.title}` : le.title;
+    // Add 종일] prefix for all-day events - REMOVED as per user request
+    const title = le.title;
 
     return {
         'summary': title,
@@ -1866,7 +1920,7 @@ function addSwipeGesture(container, content) {
             content.style.opacity = '0';
 
             // Find delete button and trigger delete
-            const deleteBtn = container.querySelector('.swipe-action-delete');
+            const deleteBtn = container.querySelector('.swipe-action-delete, .list-swipe-delete');
             if (deleteBtn) {
                 setTimeout(() => {
                     deleteBtn.click();
@@ -1916,7 +1970,7 @@ function addSwipeGesture(container, content) {
             content.style.transform = 'translateX(100%)';
             content.style.opacity = '0';
 
-            const deleteBtn = container.querySelector('.swipe-action-delete');
+            const deleteBtn = container.querySelector('.swipe-action-delete, .list-swipe-delete');
             if (deleteBtn) {
                 setTimeout(() => {
                     deleteBtn.click();
@@ -2022,15 +2076,64 @@ function renderEventList() {
         return parseDate(a) - parseDate(b);
     });
 
-    sortedKeys.forEach(dateStr => {
+    // Find nearest date to scroll to
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let scrollTargetId = null;
+    let minDiff = Infinity;
+
+    sortedKeys.forEach((dateStr, index) => {
         const groupEl = document.createElement('div');
         groupEl.className = 'list-date-group';
+
+        // Parse date from string (e.g., "2025년 11월 30일")
+        const nums = dateStr.match(/\d+/g);
+        const groupDate = new Date(nums[0], nums[1] - 1, nums[2]);
+
+        // Check if this is the nearest future date (or today)
+        if (groupDate >= today && groupDate - today < minDiff) {
+            minDiff = groupDate - today;
+            scrollTargetId = `date-group-${index}`;
+        }
+        groupEl.id = `date-group-${index}`;
+
         const headerEl = document.createElement('h3');
         headerEl.className = 'list-date-header';
-        headerEl.textContent = dateStr.replace(/^\d{4}년\s/, '');
+
+        // Format: 2025년 11월 30일 -> 25년 11월 30일
+        headerEl.textContent = dateStr.replace(/^20(\d{2})년/, '$1년');
         groupEl.appendChild(headerEl);
 
         grouped[dateStr].forEach(e => {
+            // Swipe Container
+            const swipeContainer = document.createElement('div');
+            swipeContainer.className = 'swipe-container';
+
+            // Delete Action
+            const deleteAction = document.createElement('div');
+            deleteAction.className = 'list-swipe-delete'; // Use new class
+            deleteAction.innerHTML = '<span>삭제</span>'; // Gray text only
+            deleteAction.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                if (confirm('정말 삭제하시겠습니까?')) {
+                    // Delete logic
+                    if (e.id) {
+                        deletedEvents.push({
+                            uid: e.uid,
+                            googleId: e.googleId
+                        });
+                    }
+                    events = events.filter(evt => evt.id !== e.id);
+                    saveEvents();
+                    renderEventList(); // Re-render list
+                    renderCalendar(); // Update calendar view
+                } else {
+                    // Reset swipe if cancelled
+                    itemEl.style.transform = 'translateX(0)';
+                    itemEl.classList.remove('swiping');
+                }
+            });
+
             const itemEl = document.createElement('div');
             itemEl.className = 'list-item';
 
@@ -2051,9 +2154,6 @@ function renderEventList() {
                 const eventEnd = new Date(e.end);
 
                 const isStartDay = isSameDay(currentDay, eventStart);
-                // For end day check, we need to be careful. 
-                // If event ends at 00:00 of next day, the loop stopped before that day.
-                // So we only see end day if it has time > 00:00.
                 const isEndDay = isSameDay(currentDay, eventEnd);
 
                 if (isStartDay && isEndDay) {
@@ -2073,12 +2173,34 @@ function renderEventList() {
             titleEl.textContent = e.title;
             itemEl.appendChild(timeEl);
             itemEl.appendChild(titleEl);
-            itemEl.addEventListener('click', () => openModal(e));
-            groupEl.appendChild(itemEl);
+
+            // Click to open modal (unless swiping)
+            itemEl.addEventListener('click', () => {
+                if (!itemEl.classList.contains('swiping')) {
+                    openModal(e);
+                }
+            });
+
+            swipeContainer.appendChild(deleteAction);
+            swipeContainer.appendChild(itemEl);
+
+            // Add swipe gesture
+            addSwipeGesture(swipeContainer, itemEl);
+
+            groupEl.appendChild(swipeContainer);
         });
         eventListContainer.appendChild(groupEl);
     });
+
     if (sortedKeys.length === 0) {
         eventListContainer.innerHTML = '<p style="text-align:center; color:var(--text-color); opacity:0.7; margin-top:2rem;">일정이 없습니다.</p>';
+    } else if (scrollTargetId) {
+        // Scroll to the nearest upcoming event
+        setTimeout(() => {
+            const target = document.getElementById(scrollTargetId);
+            if (target) {
+                target.scrollIntoView({ behavior: 'auto', block: 'start' }); // Instant scroll
+            }
+        }, 0); // Immediate
     }
 }

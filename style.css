@@ -1034,6 +1034,26 @@ body.light-mode .form-group textarea {
 }
 
 /* Modal Date Range */
+.date-time-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.date-time-row input {
+    flex: 1;
+    width: auto !important;
+    /* Override 100% width */
+    min-width: 0;
+}
+
+.datetime-separator {
+    color: var(--text-color);
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
 .date-range-inputs {
     display: flex;
     flex-direction: column;
@@ -1238,6 +1258,7 @@ body.light-mode .event-card-desc {
     color: rgba(0, 0, 0, 0.6);
 }
 
+/* Day Detail Swipe Delete (Red BG + Icon) */
 .swipe-action-delete {
     position: absolute;
     top: 0;
@@ -1252,17 +1273,39 @@ body.light-mode .event-card-desc {
     z-index: 1;
     right: 0;
     background: #ef4444;
-    /* Red background with trash icon */
+    /* Red background */
     background-image: url('trash-icon.png');
-    background-size: 40px 40px;
+    background-size: 32px 32px;
     background-repeat: no-repeat;
     background-position: center;
-    background-color: #ef4444;
 }
 
-/* Hide text when using background icon */
 .swipe-action-delete span {
     display: none;
+    /* Hide text for Day Detail */
+}
+
+/* List View Swipe Delete (Gray Text, No BG) */
+.list-swipe-delete {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1;
+    right: 0;
+    background: transparent;
+}
+
+.list-swipe-delete span {
+    color: #94a3b8;
+    /* Gray text */
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 /* Prevent click events during swipe */
