@@ -28,12 +28,17 @@
     --blob-1: #ec4899;
     --blob-2: #8b5cf6;
     --blob-3: #3b82f6;
+
+    /* Font Sizes */
+    --ui-font-size: 16px;
+    --header-font-size: 1.6rem;
+    --chip-font-size: 0.85rem;
 }
 
+/* Light mode override */
 body.light-mode {
-    /* iOS Light Theme */
-    --bg-color: #e8e8ed;
-    --text-color: #1c1c1e;
+    --bg-color: #ffffff;
+    --text-color: #1f2937;
     --primary-color: #007aff;
     --glass-bg: rgba(255, 255, 255, 0.8);
     --glass-border: rgba(0, 0, 0, 0.1);
@@ -46,6 +51,34 @@ body.light-mode {
     /* Purple-ish */
     --blob-3: #007aff;
     /* Blue */
+}
+
+/* Dark mode - make appearance icon visible */
+body:not(.light-mode) #btn-appearance img,
+body:not(.light-mode) .appearance-row img {
+    filter: invert(1) brightness(2);
+}
+
+/* Appearance button styles and feedback */
+#btn-appearance {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    z-index: 3000;
+}
+
+#btn-appearance:hover {
+    opacity: 0.8;
+}
+
+#btn-appearance:active {
+    transform: scale(0.95);
+    opacity: 0.7;
+}
+
+.appearance-row {
+    position: relative;
+    z-index: 3000;
 }
 
 /* Fix for horizontal scroll in simulator */
@@ -75,7 +108,8 @@ textarea {
 }
 
 body {
-    font-family: 'BinggraeMelona', 'BinggraeMelona-Bold', 'HYHeadlineM', 'HY헤드라인M', 'Jua', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    font-family: 'Jua', sans-serif;
+    font-size: var(--ui-font-size);
     background-color: var(--bg-color);
     color: var(--text-color);
     min-height: 100vh;
@@ -84,6 +118,7 @@ body {
     align-items: center;
     overflow-x: hidden;
     position: relative;
+    transition: background 0.3s, color 0.3s;
 }
 
 /* Background Blobs */
@@ -805,6 +840,357 @@ body.light-mode .calendar-header button:hover {
     /* Take all available vertical space */
 }
 
+/* Exclude calendar dates from global UI font changes */
+.calendar-grid .day-number,
+.calendar-grid .event-indicator,
+.calendar-grid span,
+.calendar-grid div {
+    font-family: 'Jua', sans-serif !important;
+}
+
+.calendar-grid .day-number {
+    font-size: 1rem !important;
+}
+
+/* Diary Section (Overlay) */
+.diary-section {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #f3f4f6;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    perspective: 1500px;
+    /* Enable 3D perspective */
+    overflow: hidden;
+}
+
+/* Diary Cover Animation */
+.diary-cover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #8b4513;
+    /* Leather brown fallback */
+    background-image: url('assets/icon-diary-toggle.png');
+    /* Use icon as texture */
+    background-size: cover;
+    background-position: center;
+    z-index: 2001;
+    transform-origin: left center;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset -10px 0 20px rgba(0, 0, 0, 0.3), 5px 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Open Animation: Flip Open -> Zoom In (Sucked in) */
+@keyframes openBookAndZoom {
+    0% {
+        transform: rotateY(0deg) scale(1);
+        opacity: 1;
+    }
+
+    40% {
+        transform: rotateY(-160deg) scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: rotateY(-180deg) scale(5);
+        opacity: 0;
+    }
+}
+
+/* Close Animation: Page Turn Back (Left to Right) */
+@keyframes pageTurnBack {
+    0% {
+        transform: rotateY(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: rotateY(160deg);
+        opacity: 0.3;
+    }
+}
+
+.diary-cover-front {
+    width: 100%;
+    height: 100%;
+    background: inherit;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.diary-cover.open {
+    animation: openBookAndZoom 0.7s forwards cubic-bezier(0.645, 0.045, 0.355, 1);
+    pointer-events: none;
+}
+
+.diary-cover.close {
+    animation: pageTurnBack 0.7s forwards cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+/* Ensure content is behind cover initially but visible when open */
+.diary-header,
+.diary-paper,
+.diary-toolbar {
+    opacity: 0;
+    transition: opacity 0.4s ease-in-out 0.5s;
+}
+
+.diary-section.active .diary-header,
+.diary-section.active .diary-paper,
+.diary-section.active .diary-toolbar {
+    opacity: 1;
+}
+
+.diary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    z-index: 1002;
+    gap: 1rem;
+    min-height: 3rem;
+    /* Reserve space for largest font size */
+}
+
+.diary-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    /* Prevent arrow buttons from shrinking */
+}
+
+.diary-header h2 {
+    font-size: 1.4rem;
+    font-family: 'BMJUA', 'Jua', sans-serif;
+    margin: 0;
+    flex: 1;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Diary Cover Animation */
+.diary-cover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #5d4037;
+    /* Leather brown */
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transform-origin: left;
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: inset 10px 0 20px rgba(0, 0, 0, 0.3);
+}
+
+.diary-cover-front {
+    border: 2px solid #8d6e63;
+    padding: 2rem;
+    border-radius: 12px;
+    color: #d7ccc8;
+    font-family: 'BMJUA', 'Jua', sans-serif;
+    text-align: center;
+}
+
+.diary-cover.open {
+    transform: perspective(2000px) rotateY(-110deg);
+}
+
+.diary-cover.close {
+    transform: perspective(2000px) rotateY(0deg);
+}
+
+/* Paper Styles */
+.diary-paper {
+    flex: 1;
+    background: #fdfbf7;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    cursor: default;
+    /* Default Background (Lined) handled by JS or default class */
+}
+
+#diary-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    /* Default Lined Pattern */
+    background-image: linear-gradient(#e5e7eb 1px, transparent 1px);
+    background-size: 100% 2.5rem;
+    margin-top: 3rem;
+}
+
+#diary-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    /* Default: click through to paper/stickers */
+    touch-action: none;
+    /* Prevent scrolling when drawing */
+}
+
+#diary-content-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+    /* Allow clicks to pass through empty areas */
+}
+
+.diary-item {
+    pointer-events: auto;
+    /* Re-enable pointer events for items */
+}
+
+/* Pen Settings Toolbar */
+.pen-settings {
+    position: absolute;
+    bottom: 80px;
+    /* Above main toolbar */
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    padding: 0.8rem;
+    border-radius: 16px;
+    z-index: 1005;
+    display: flex;
+    gap: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.pen-setting-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.btn-icon-small {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: var(--text-color);
+}
+
+.btn-icon-small.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: transparent;
+}
+
+
+
+/* Toolbar */
+.diary-toolbar {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    padding: 1rem 0;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    z-index: 1002;
+}
+
+.tool-btn {
+    padding: 0.8rem 1.5rem;
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+    cursor: pointer;
+    font-family: 'BMJUA', 'Jua', sans-serif;
+    font-size: 1.1rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px;
+}
+
+.tool-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px);
+}
+
+.btn-diary-toggle {
+    /* Ensure it's visible */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Back Button */
+#btn-diary-back {
+    font-family: 'BMJUA', 'Jua', sans-serif;
+    font-size: 1.1rem;
+    color: var(--text-color);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: transform 0.2s;
+}
+
+#btn-diary-back:hover {
+    transform: scale(1.05);
+}
+
+/* Light mode overrides */
+body.light-mode .diary-section {
+    background: #f5f5f5;
+}
+
+body.light-mode .diary-cover {
+    background: #8d6e63;
+}
+
+body.light-mode .diary-cover-front {
+    border-color: #d7ccc8;
+    color: #efebe9;
+}
+
 .calendar-header-row {
     display: contents;
 }
@@ -1170,8 +1556,18 @@ body.light-mode .close:hover {
 }
 
 .btn-primary {
-    background: #3b82f6;
+    background: var(--primary-color);
     color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-primary:hover {
+    background: var(--primary-hover);
 }
 
 .btn-success {
@@ -1185,8 +1581,18 @@ body.light-mode .close:hover {
 }
 
 .btn-secondary {
-    background: #64748b;
-    color: white;
+    background: #e5e7eb;
+    color: #374151;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+    background: #d1d5db;
 }
 
 /* Defensive CSS for Modal Buttons - Ensure Visibility */
@@ -1219,6 +1625,8 @@ body.light-mode .close:hover {
     border-radius: 12px;
     cursor: pointer;
     /* Ensure clickable */
+    z-index: 3000;
+    position: relative;
 }
 
 .event-card {
@@ -1943,6 +2351,118 @@ body.mobile-simulator .btn-add-bottom {
     gap: 0.3rem;
     cursor: pointer;
     transition: background 0.2s;
+}
+
+/* Resize & Rotate Handles */
+.item-controls {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 1px dashed rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+    display: none;
+}
+
+.diary-item.selected .item-controls {
+    display: block;
+}
+
+/* Common Handle Style */
+.control-handle {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background: white;
+    border: 1px solid #333;
+    border-radius: 50%;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 101;
+    transition: transform 0.1s;
+}
+
+.control-handle:active {
+    transform: scale(0.9);
+}
+
+.resize-handle {
+    top: -12px;
+    right: -12px;
+    cursor: ne-resize;
+}
+
+.rotate-handle {
+    top: -12px;
+    left: -12px;
+    cursor: grab;
+}
+
+.delete-handle {
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: pointer;
+    color: red;
+    border-color: red;
+}
+
+.text-color-handle {
+    bottom: -12px;
+    right: -12px;
+    cursor: pointer;
+    color: #3b82f6;
+}
+
+.resize-handle::after {
+    content: '↔';
+    transform: rotate(45deg);
+}
+
+.rotate-handle::after {
+    content: '↻';
+}
+
+.delete-handle::after {
+    content: '×';
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.text-color-handle::after {
+    content: '⚙️';
+    font-size: 14px;
+}
+
+.layer-up-handle {
+    bottom: -12px;
+    left: 12px;
+    cursor: pointer;
+    color: #10b981;
+}
+
+.layer-up-handle::after {
+    content: '▲';
+    font-size: 12px;
+}
+
+.layer-down-handle {
+    bottom: -12px;
+    left: -12px;
+    /* Adjusted to not overlap rotate */
+    left: 36px;
+    cursor: pointer;
+    color: #ef4444;
+}
+
+.layer-down-handle::after {
+    content: '▼';
+    font-size: 12px;
 }
 
 .day-event-item:hover {

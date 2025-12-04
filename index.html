@@ -13,7 +13,9 @@
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Jua&family=Nanum+Pen+Script&family=Inter:wght@400;600&family=Roboto:wght@400;500&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=67">
     <script src="lib/chrono.min.js"></script>
 </head>
@@ -39,14 +41,12 @@
         <input type="color" id="event-color-input" value="#3b82f6" style="display: none;">
 
 
-        <!-- Theme Toggle -->
-        <div class="color-theme-row">
-            <div class="theme-toggle-wrapper">
-                <label class="toggle-switch">
-                    <input type="checkbox" id="theme-toggle-checkbox">
-                    <span class="toggle-slider"></span>
-                </label>
-            </div>
+        <!-- Appearance Settings (New Row) -->
+        <div class="appearance-row" style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem;">
+            <button id="btn-appearance" class="btn-icon-large" title="Appearance"
+                style="background: none; border: none; padding: 0;">
+                <img src="assets/icon-appearance.png" alt="Appearance" style="width: 32px; height: 32px;">
+            </button>
         </div>
 
         <!-- Input -->
@@ -60,6 +60,11 @@
             <button id="btn-voice-input" class="btn-icon btn-voice" title="음성 입력">
                 <img src="voice-icon.png" alt="음성 입력" class="voice-icon">
                 <span class="listening-indicator">듣는 중...</span>
+            </button>
+            <!-- Diary Toggle Button (Moved here) -->
+            <button id="btn-diary-toggle" class="btn-icon-large" title="다이어리 꾸미기"
+                style="background: none; border: none; padding: 0; margin-left: 0.5rem;">
+                <img src="assets/icon-diary-toggle.png" alt="Diary" style="width: 48px; height: 48px;">
             </button>
         </div>
 
@@ -80,6 +85,100 @@
             </div>
             <div class="calendar-grid" id="calendar-grid">
                 <!-- Days will be generated here -->
+            </div>
+        </section>
+
+        <!-- Diary Section (Hidden by default) -->
+        <section class="diary-section hidden" id="diary-section">
+            <!-- Diary Cover for Animation -->
+            <div id="diary-cover" class="diary-cover hidden">
+                <div class="diary-cover-front">
+                    <!-- Empty cover, no text -->
+                </div>
+            </div>
+
+            <div class="diary-header" style="justify-content: space-between; align-items: center; position: relative;">
+                <button id="btn-diary-back" class="btn-icon-small" title="돌아가기"
+                    style="background: none; border: none; padding: 0;">
+                    <img src="assets/icon-calendar-back.png" alt="Back" style="width: 32px; height: 32px;">
+                </button>
+
+                <div class="diary-nav"
+                    style="position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 1rem;">
+                    <button id="diary-prev-day" class="btn-text">◀</button>
+                    <h2 id="diary-date-title" style="margin: 0; font-size: 1.5rem;">2023년 12월 1일</h2>
+                    <button id="diary-next-day" class="btn-text">▶</button>
+                </div>
+
+                <button id="btn-diary-settings" class="btn-icon-small" title="다이어리 설정">⚙️</button>
+            </div>
+            <div class="diary-paper" id="diary-paper">
+                <div class="diary-background" id="diary-background"></div>
+                <canvas id="diary-canvas"></canvas>
+                <div id="diary-content-layer"></div>
+            </div>
+
+            <!-- Pen Settings (Visible when Pen is active) -->
+            <div id="pen-settings" class="pen-settings hidden">
+                <div class="pen-setting-row">
+                    <input type="color" id="pen-color" value="#000000">
+                    <input type="range" id="pen-width" min="1" max="20" value="2">
+                    <button id="tool-eraser" class="btn-icon-small" title="지우개">🧹</button>
+                </div>
+            </div>
+
+            <div class="diary-toolbar">
+                <button class="tool-btn" id="tool-photo">사진업로드</button>
+                <button class="tool-btn" id="tool-sticker">이모티콘</button>
+                <button class="tool-btn" id="tool-text">글자</button>
+                <button class="tool-btn" id="tool-pen">그리기</button>
+                <button class="tool-btn" id="btn-settings-share"
+                    style="display: flex; align-items: center; justify-content: center; gap: 5px;">
+                    <img src="assets/icon-share.png" alt="Share" style="width: 20px; height: 20px;">
+                    공유
+                </button>
+            </div>
+
+            <input type="file" id="photo-input" accept="image/*" style="display: none;">
+
+            <!-- Diary Settings Modal -->
+            <div id="diary-settings-modal" class="modal hidden">
+                <div class="modal-content glass-container" style="max-width: 360px;">
+                    <span id="close-diary-settings" class="close">&times;</span>
+                    <h2>다이어리 설정</h2>
+
+                    <div class="form-group">
+                        <label>속지 타입</label>
+                        <select id="diary-paper-type" class="date-select">
+                            <option value="lined">줄 공책 (Wide)</option>
+                            <option value="lined-narrow">줄 공책 (Narrow)</option>
+                            <option value="grid">모눈종이</option>
+                            <option value="dot">점선 (Dot)</option>
+                            <option value="plain">빈 종이</option>
+                            <option value="kraft">크라프트지</option>
+                            <option value="dark">다크 모드</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>속지 색상</label>
+                        <input type="color" id="diary-paper-color" value="#fdfbf7"
+                            style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);">
+                    </div>
+
+                    <!-- Preview Area -->
+                    <div class="form-group">
+                        <label>미리보기</label>
+                        <div id="diary-preview"
+                            style="width: 100%; height: 150px; border: 1px solid #ccc; border-radius: 8px; position: relative; overflow: hidden;">
+                            <div id="diary-preview-bg" style="width: 100%; height: 100%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions" style="margin-top: 20px;">
+                        <button id="btn-settings-confirm" class="btn-primary" style="width: 100%;">확인</button>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -127,7 +226,8 @@
                         <label
                             style="display: inline-flex; align-items: center; gap: 0.2rem; cursor: pointer; writing-mode: horizontal-tb;">
                             <input type="checkbox" id="edit-reminder-enabled"
-                                style="width: 16px; height: 16px; margin: 0;"> <span
+                                style="width: 16px; height: 16px; margin: 0;">
+                            <span
                                 style="writing-mode: horizontal-tb; white-space: nowrap; display: inline-block;">미리알림</span>
                         </label>
                     </div>
@@ -163,7 +263,150 @@
                     </button>
                     <!-- Add more devices later -->
                 </div>
+
                 <button id="close-device-modal" class="btn-text">닫기</button>
+            </div>
+        </div>
+
+        <!-- Appearance Settings Modal -->
+        <div id="appearance-modal" class="modal hidden">
+            <div class="modal-content glass-container"
+                style="max-width: 360px; display: flex; flex-direction: column; max-height: 80vh; padding: 0;">
+
+                <!-- Header (Fixed) -->
+                <div
+                    style="padding: 1.5rem 1.5rem 1rem 1.5rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="margin: 0;">Appearance</h2>
+                    <span id="close-appearance" class="close" style="position: static; line-height: 1;">&times;</span>
+                </div>
+
+                <!-- Scrollable Body -->
+                <div style="overflow-y: auto; padding: 1.5rem; flex: 1;">
+                    <div class="form-group">
+                        <label>Theme</label>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="theme-light" class="btn-secondary" style="flex: 1;">Light</button>
+                            <button id="theme-dark" class="btn-secondary" style="flex: 1;">Dark</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>UI Font</label>
+                        <select id="ui-font" class="date-select">
+                            <option value="'Jua', sans-serif">Jua (Default)</option>
+                            <option value="'Nanum Pen Script', cursive">Nanum Pen Script</option>
+                            <option value="'BMJUA', cursive">BMJUA</option>
+                            <option value="'Roboto', sans-serif">Roboto</option>
+                            <option value="'Inter', sans-serif">Inter</option>
+                        </select>
+                    </div>
+
+
+
+                    <div class="form-group">
+                        <label>Tabs (Calendar/List)</label>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-secondary fs-btn" data-target="fs-tabs" data-value="12"
+                                style="flex: 1;">S</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-tabs" data-value="16"
+                                style="flex: 1;">M</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-tabs" data-value="20"
+                                style="flex: 1;">L</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-tabs" data-value="24"
+                                style="flex: 1;">XL</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>App Title</label>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-secondary fs-btn" data-target="fs-app-title" data-value="20"
+                                style="flex: 1;">S</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-app-title" data-value="24"
+                                style="flex: 1;">M</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-app-title" data-value="28"
+                                style="flex: 1;">L</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-app-title" data-value="32"
+                                style="flex: 1;">XL</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Calendar Header</label>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-secondary fs-btn" data-target="fs-cal-header" data-value="12"
+                                style="flex: 1;">S</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-cal-header" data-value="16"
+                                style="flex: 1;">M</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-cal-header" data-value="20"
+                                style="flex: 1;">L</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-cal-header" data-value="24"
+                                style="flex: 1;">XL</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Calendar Events</label>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-secondary fs-btn" data-target="fs-cal-events" data-value="10"
+                                style="flex: 1;">S</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-cal-events" data-value="12"
+                                style="flex: 1;">M</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-cal-events" data-value="14"
+                                style="flex: 1;">L</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-cal-events" data-value="16"
+                                style="flex: 1;">XL</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Calendar Dates</label>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-secondary fs-btn" data-target="fs-cal-date" data-value="12"
+                                style="flex: 1;">S</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-cal-date" data-value="16"
+                                style="flex: 1;">M</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-cal-date" data-value="20"
+                                style="flex: 1;">L</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-cal-date" data-value="24"
+                                style="flex: 1;">XL</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>List View Headers</label>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-secondary fs-btn" data-target="fs-list-header" data-value="14"
+                                style="flex: 1;">S</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-list-header" data-value="18"
+                                style="flex: 1;">M</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-list-header" data-value="22"
+                                style="flex: 1;">L</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-list-header" data-value="24"
+                                style="flex: 1;">XL</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>List View Content</label>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-secondary fs-btn" data-target="fs-list-content" data-value="12"
+                                style="flex: 1;">S</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-list-content" data-value="16"
+                                style="flex: 1;">M</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-list-content" data-value="20"
+                                style="flex: 1;">L</button>
+                            <button class="btn-secondary fs-btn" data-target="fs-list-content" data-value="24"
+                                style="flex: 1;">XL</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer (Fixed) -->
+                <div class="modal-actions"
+                    style="padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border); margin-top: 0;">
+                    <button id="btn-appearance-save" class="btn-primary" style="width: 100%;">Save</button>
+                </div>
             </div>
         </div>
 
@@ -180,65 +423,65 @@
                 </button>
             </div>
         </div>
+    </div>
 
-        <!-- Category Creation Modal -->
-        <div id="category-modal" class="modal hidden">
-            <div class="modal-content glass-container" style="max-width: 320px;">
-                <span id="close-category-modal" class="close">&times;</span>
-                <h2>새 카테고리 추가</h2>
+    <!-- Category Creation Modal -->
+    <div id="category-modal" class="modal hidden">
+        <div class="modal-content glass-container" style="max-width: 320px;">
+            <span id="close-category-modal" class="close">&times;</span>
+            <h2>새 카테고리 추가</h2>
 
-                <div class="form-group">
-                    <label>카테고리 이름</label>
-                    <input type="text" id="new-category-name" placeholder="예: 독서, 게임, 데이트">
-                </div>
-
-                <div class="form-group">
-                    <label>색상 선택</label>
-                    <div id="recommended-colors-grid" class="color-grid">
-                        <!-- Colors will be injected here -->
-                    </div>
-                </div>
-
-                <button id="btn-category-save" class="btn btn-primary"
-                    style="width: 100%; margin-top: 1rem;">저장</button>
+            <div class="form-group">
+                <label>카테고리 이름</label>
+                <input type="text" id="new-category-name" placeholder="예: 독서, 게임, 데이트">
             </div>
-        </div>
 
-        <!-- Year/Month Picker Modal -->
-        <div id="date-picker-modal" class="modal hidden">
-            <div class="modal-content glass-container" style="max-width: 280px;">
-                <span id="close-date-picker" class="close">&times;</span>
-                <h2>날짜 선택</h2>
-
-                <div class="form-group">
-                    <label>년도</label>
-                    <select id="year-select" class="date-select">
-                        <!-- Years will be populated by JS -->
-                    </select>
+            <div class="form-group">
+                <label>색상 선택</label>
+                <div id="recommended-colors-grid" class="color-grid">
+                    <!-- Colors will be injected here -->
                 </div>
-
-                <div class="form-group">
-                    <label>월</label>
-                    <select id="month-select" class="date-select">
-                        <option value="0">1월</option>
-                        <option value="1">2월</option>
-                        <option value="2">3월</option>
-                        <option value="3">4월</option>
-                        <option value="4">5월</option>
-                        <option value="5">6월</option>
-                        <option value="6">7월</option>
-                        <option value="7">8월</option>
-                        <option value="8">9월</option>
-                        <option value="9">10월</option>
-                        <option value="10">11월</option>
-                        <option value="11">12월</option>
-                    </select>
-                </div>
-
-                <button id="btn-date-picker-apply" class="btn btn-primary"
-                    style="width: 100%; margin-top: 1rem;">적용</button>
             </div>
+
+            <button id="btn-category-save" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">저장</button>
         </div>
+    </div>
+
+    <!-- Year/Month Picker Modal -->
+    <div id="date-picker-modal" class="modal hidden">
+        <div class="modal-content glass-container" style="max-width: 280px;">
+            <span id="close-date-picker" class="close">&times;</span>
+            <h2>날짜 선택</h2>
+
+            <div class="form-group">
+                <label>년도</label>
+                <select id="year-select" class="date-select">
+                    <!-- Years will be populated by JS -->
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>월</label>
+                <select id="month-select" class="date-select">
+                    <option value="0">1월</option>
+                    <option value="1">2월</option>
+                    <option value="2">3월</option>
+                    <option value="3">4월</option>
+                    <option value="4">5월</option>
+                    <option value="5">6월</option>
+                    <option value="6">7월</option>
+                    <option value="7">8월</option>
+                    <option value="8">9월</option>
+                    <option value="9">10월</option>
+                    <option value="10">11월</option>
+                    <option value="11">12월</option>
+                </select>
+            </div>
+
+            <button id="btn-date-picker-apply" class="btn btn-primary"
+                style="width: 100%; margin-top: 1rem;">적용</button>
+        </div>
+    </div>
     </div>
 
     <!-- Reminder Time Picker Modal -->
@@ -274,7 +517,7 @@
 
     <!-- Scripts -->
     <!-- Scripts -->
-    <script src="app.js?v=67"></script>
+    <script src="app.js?v=73" defer></script>
 
     <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>

@@ -163,22 +163,14 @@ if (modalColorPalette) {
     renderCategoryChips(modalColorPalette, document.getElementById('edit-color'));
 }
 
+// Force Light Mode as Default
+document.body.classList.add('light-mode');
+localStorage.setItem('theme', 'light');
+
 // Theme Toggle (checkbox)
 const themeToggleCheckbox = document.getElementById('theme-toggle-checkbox');
 if (themeToggleCheckbox) {
-    // Force Light Mode as default (no longer check localStorage on first load)
-    const savedTheme = localStorage.getItem('theme');
-    // If no theme saved, or if we want to reset to light, use light
-    const isLight = savedTheme === null || savedTheme === 'light';
-
-    if (isLight) {
-        document.body.classList.add('light-mode');
-        themeToggleCheckbox.checked = false;
-        localStorage.setItem('theme', 'light'); // Save as light
-    } else {
-        document.body.classList.remove('light-mode');
-        themeToggleCheckbox.checked = true;
-    }
+    themeToggleCheckbox.checked = false; // Ensure checkbox reflects light mode
 
     themeToggleCheckbox.addEventListener('change', (e) => {
         if (e.target.checked) {
@@ -190,6 +182,208 @@ if (themeToggleCheckbox) {
             document.body.classList.add('light-mode');
             localStorage.setItem('theme', 'light');
         }
+    });
+}
+
+// Appearance Settings
+const btnAppearance = document.getElementById('btn-appearance');
+console.log('Appearance Button:', btnAppearance); // Debug Log
+const appearanceModal = document.getElementById('appearance-modal');
+const closeAppearance = document.getElementById('close-appearance');
+const themeLightBtn = document.getElementById('theme-light');
+const themeDarkBtn = document.getElementById('theme-dark');
+const uiFontSelect = document.getElementById('ui-font');
+const btnAppearanceSave = document.getElementById('btn-appearance-save');
+const savedUIFont = localStorage.getItem('ui-font') || "'Jua', sans-serif";
+
+function applyUISettings() {
+    const font = localStorage.getItem('ui-font') || "'Jua', sans-serif";
+    // Use CSS variable for font size (default 16px as base)
+    document.documentElement.style.setProperty('--ui-font-size', '16px');
+
+    // Also apply to common elements explicitly for better visibility
+    // Load granular font sizes
+    const fsTabs = localStorage.getItem('fs-tabs') || '16';
+    const fsAppTitle = localStorage.getItem('fs-app-title') || '24';
+    const fsCalHeader = localStorage.getItem('fs-cal-header') || '16';
+    const fsCalEvents = localStorage.getItem('fs-cal-events') || '12';
+    const fsCalDate = localStorage.getItem('fs-cal-date') || '16';
+    const fsListHeader = localStorage.getItem('fs-list-header') || '18';
+    const fsListContent = localStorage.getItem('fs-list-content') || '16';
+
+    const style = document.createElement('style');
+    style.id = 'dynamic-font-size-styles';
+
+    // Remove existing dynamic styles
+    const existing = document.getElementById('dynamic-font-size-styles');
+    if (existing) existing.remove();
+
+    style.textContent = `
+        /* Base UI Font Size (Fixed at 16px, overridden by specific settings) */
+        .input-row input, .input-row textarea, .form-group label, .form-group input, .form-group select, .form-group textarea, .modal-content:not(#diary-settings-modal) *, .parsing-feedback, .category-row * {
+            font-size: 16px !important;
+        }
+
+        /* 1. Tabs */
+        .tab-btn { font-size: ${fsTabs}px !important; }
+
+        /* 2. App Title */
+        .title-row h2 { font-size: ${fsAppTitle}px !important; }
+
+        /* 3. Calendar Header */
+        .calendar-header button, .day-name { font-size: ${fsCalHeader}px !important; }
+
+        /* 4. Calendar Events */
+        .event-card, .event-card-title, .event-card-time { font-size: ${fsCalEvents}px !important; }
+
+        /* 5. Calendar Dates */
+        .calendar-grid .day-number { font-size: ${fsCalDate}px !important; }
+
+        /* 6. List View Headers */
+        .list-group-header { font-size: ${fsListHeader}px !important; }
+
+        /* 7. List View Content */
+        .list-item, .list-item-title, .list-item-time { font-size: ${fsListContent}px !important; }
+    `;
+
+    document.head.appendChild(style);
+}
+
+// Apply on load
+applyUISettings();
+
+if (btnAppearance) {
+    btnAppearance.addEventListener('click', () => {
+        console.log('Appearance Button Clicked'); // Debug Log
+        // Load current settings
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        const currentFont = localStorage.getItem('ui-font') || "'Jua', sans-serif";
+        const currentSize = localStorage.getItem('ui-font-size') || '16';
+
+        // Update UI to reflect current settings
+        if (currentTheme === 'light') {
+            themeLightBtn.style.background = '#3b82f6';
+            themeLightBtn.style.color = 'white';
+            themeDarkBtn.style.background = '#e5e7eb';
+            themeDarkBtn.style.color = '#374151';
+        } else {
+            themeDarkBtn.style.background = '#3b82f6';
+            themeDarkBtn.style.color = 'white';
+            themeLightBtn.style.background = '#e5e7eb';
+            themeLightBtn.style.color = '#374151';
+        }
+
+        uiFontSelect.value = currentFont;
+
+        // Highlight current font size buttons
+        const updateFontSizeButtons = (target, value) => {
+            document.querySelectorAll(`.fs-btn[data-target="${target}"]`).forEach(btn => {
+                if (btn.dataset.value === value) {
+                    btn.style.background = '#3b82f6';
+                    btn.style.color = 'white';
+                } else {
+                    btn.style.background = '#e5e7eb';
+                    btn.style.color = '#374151';
+                }
+            });
+        };
+
+        // Load and highlight current settings
+        updateFontSizeButtons('fs-tabs', localStorage.getItem('fs-tabs') || '16');
+        updateFontSizeButtons('fs-app-title', localStorage.getItem('fs-app-title') || '24');
+        updateFontSizeButtons('fs-cal-header', localStorage.getItem('fs-cal-header') || '16');
+        updateFontSizeButtons('fs-cal-events', localStorage.getItem('fs-cal-events') || '12');
+        updateFontSizeButtons('fs-cal-date', localStorage.getItem('fs-cal-date') || '16');
+        updateFontSizeButtons('fs-list-header', localStorage.getItem('fs-list-header') || '18');
+        updateFontSizeButtons('fs-list-content', localStorage.getItem('fs-list-content') || '16');
+
+        appearanceModal.classList.remove('hidden');
+    });
+}
+
+if (closeAppearance) {
+    closeAppearance.addEventListener('click', () => {
+        appearanceModal.classList.add('hidden');
+    });
+}
+
+if (themeLightBtn) {
+    themeLightBtn.addEventListener('click', () => {
+        themeLightBtn.style.background = '#3b82f6';
+        themeLightBtn.style.color = 'white';
+        themeDarkBtn.style.background = '#e5e7eb';
+        themeDarkBtn.style.color = '#374151';
+    });
+}
+
+if (themeDarkBtn) {
+    themeDarkBtn.addEventListener('click', () => {
+        themeDarkBtn.style.background = '#3b82f6';
+        themeDarkBtn.style.color = 'white';
+        themeLightBtn.style.background = '#e5e7eb';
+        themeLightBtn.style.color = '#374151';
+    });
+}
+
+// Font size button handlers
+if (appearanceModal) {
+    appearanceModal.addEventListener('click', (e) => {
+        if (e.target.classList.contains('fs-btn')) {
+            const target = e.target.dataset.target;
+            const value = e.target.dataset.value;
+
+            // Update button styles
+            document.querySelectorAll(`.fs-btn[data-target="${target}"]`).forEach(btn => {
+                if (btn === e.target) {
+                    btn.style.background = '#3b82f6';
+                    btn.style.color = 'white';
+                } else {
+                    btn.style.background = '#e5e7eb';
+                    btn.style.color = '#374151';
+                }
+            });
+        }
+    });
+}
+
+if (btnAppearanceSave) {
+    btnAppearanceSave.addEventListener('click', () => {
+        // Determine selected theme
+        const isLightSelected = themeLightBtn.style.background.includes('59, 130, 246') || themeLightBtn.style.background === '#3b82f6';
+        const theme = isLightSelected ? 'light' : 'dark';
+
+        // Save settings
+        localStorage.setItem('theme', theme);
+        localStorage.setItem('ui-font', uiFontSelect.value);
+
+        // Save granular settings from selected buttons
+        const getSelectedValue = (target) => {
+            const selectedBtn = document.querySelector(`.fs-btn[data-target="${target}"][style*="rgb(59, 130, 246)"]`) ||
+                document.querySelector(`.fs-btn[data-target="${target}"][style*="#3b82f6"]`);
+            return selectedBtn ? selectedBtn.dataset.value : null;
+        };
+
+        localStorage.setItem('fs-tabs', getSelectedValue('fs-tabs') || '16');
+        localStorage.setItem('fs-app-title', getSelectedValue('fs-app-title') || '24');
+        localStorage.setItem('fs-cal-header', getSelectedValue('fs-cal-header') || '16');
+        localStorage.setItem('fs-cal-events', getSelectedValue('fs-cal-events') || '12');
+        localStorage.setItem('fs-cal-date', getSelectedValue('fs-cal-date') || '16');
+        localStorage.setItem('fs-list-header', getSelectedValue('fs-list-header') || '18');
+        localStorage.setItem('fs-list-content', getSelectedValue('fs-list-content') || '16');
+
+        // Apply theme
+        if (theme === 'light') {
+            document.body.classList.add('light-mode');
+            if (themeToggleCheckbox) themeToggleCheckbox.checked = false;
+        } else {
+            document.body.classList.remove('light-mode');
+            if (themeToggleCheckbox) themeToggleCheckbox.checked = true;
+        }
+
+        // Apply UI settings
+        applyUISettings();
+
+        appearanceModal.classList.add('hidden');
     });
 }
 
@@ -220,6 +414,1123 @@ function setMode(mode) {
 
 
 
+
+// Diary Elements
+const btnDiaryToggle = document.getElementById('btn-diary-toggle');
+const btnDiaryBack = document.getElementById('btn-diary-back');
+const diarySection = document.getElementById('diary-section');
+const diaryCover = document.getElementById('diary-cover');
+const diaryDateTitle = document.getElementById('diary-date-title');
+const diaryPrevDay = document.getElementById('diary-prev-day');
+const diaryNextDay = document.getElementById('diary-next-day');
+const diaryPaper = document.getElementById('diary-paper');
+const diaryContentLayer = document.getElementById('diary-content-layer');
+const diaryCanvas = document.getElementById('diary-canvas');
+const diaryBackground = document.getElementById('diary-background');
+const toolPen = document.getElementById('tool-pen');
+const toolEraser = document.getElementById('tool-eraser');
+const penSettings = document.getElementById('pen-settings');
+const penColorInput = document.getElementById('pen-color');
+const penWidthInput = document.getElementById('pen-width');
+const toolPhoto = document.getElementById('tool-photo');
+const photoInput = document.getElementById('photo-input');
+// Settings Elements
+const btnDiarySettings = document.getElementById('btn-diary-settings');
+const diarySettingsModal = document.getElementById('diary-settings-modal');
+const closeDiarySettings = document.getElementById('close-diary-settings');
+const diaryPaperType = document.getElementById('diary-paper-type');
+const diaryPaperColor = document.getElementById('diary-paper-color');
+
+// Canvas Context
+let ctx = null;
+if (diaryCanvas) {
+    ctx = diaryCanvas.getContext('2d');
+}
+
+// Diary State
+let isDiaryMode = false;
+let currentDiaryDate = new Date();
+let isPenActive = false;
+let isEraserActive = false;
+let penColor = '#000000';
+let penWidth = 2;
+let diaryBackgroundStyle = 'lined'; // lined, grid, dot, plain
+let diaryBackgroundColor = '#fdfbf7';
+
+// Open Diary
+if (btnDiaryToggle) {
+    btnDiaryToggle.addEventListener('click', () => {
+        isDiaryMode = true;
+
+        // 1. Show Diary Section (Overlay)
+        diarySection.classList.remove('hidden');
+        diaryCover.classList.remove('hidden'); // Make sure it's visible
+        diaryCover.classList.remove('open'); // Ensure it starts closed
+        diaryCover.classList.remove('close');
+
+        // Hide Appearance button in diary mode
+        if (btnAppearance) {
+            btnAppearance.style.display = 'none';
+        }
+
+        // 2. Prepare Data
+        currentDiaryDate = new Date(currentDate);
+        resizeCanvas(); // Ensure canvas size is correct
+        renderDiary();
+
+        // 3. Animation Sequence
+        // Small delay to allow display:block to apply before animating
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                diaryCover.classList.add('open');
+                diarySection.classList.add('active'); // Trigger content fade in
+            }, 100);
+        });
+    });
+}
+
+// Close Diary (Back Button)
+if (btnDiaryBack) {
+    btnDiaryBack.addEventListener('click', () => {
+        // 1. Close Cover (Animation)
+        diaryCover.classList.remove('hidden'); // Ensure visible
+        diaryCover.classList.remove('open');
+        void diaryCover.offsetWidth; // Force reflow
+        diaryCover.classList.add('close');
+
+        diarySection.classList.remove('active'); // Fade out content
+
+        // 2. Hide Section after animation
+        setTimeout(() => {
+            diarySection.classList.add('hidden');
+            diaryCover.classList.add('hidden');
+            isDiaryMode = false;
+
+            // Show Appearance button in calendar/list mode
+            if (btnAppearance) {
+                btnAppearance.style.display = '';
+            }
+        }, 700); // Match CSS animation time (0.7s)
+    });
+}
+
+// --- Diary Logic ---
+
+// --- Diary Logic ---
+
+let diaryData = {}; // { "YYYY-MM-DD": { items: [], canvasData: "data:image...", background: "lined" } }
+// Legacy support: if array, convert to object structure on load
+
+// Load Diary Data
+const storedDiary = localStorage.getItem('diary_decorations');
+if (storedDiary) {
+    try {
+        diaryData = JSON.parse(storedDiary);
+        // Migration check
+        for (let key in diaryData) {
+            if (Array.isArray(diaryData[key])) {
+                diaryData[key] = { items: diaryData[key], canvasData: null, background: 'lined', backgroundColor: '#fdfbf7' };
+            }
+        }
+    } catch (e) {
+        console.error("Failed to load diary data", e);
+    }
+}
+
+function saveDiaryData() {
+    localStorage.setItem('diary_decorations', JSON.stringify(diaryData));
+}
+
+function getDiaryKey(date) {
+    return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+}
+
+function renderDiary() {
+    // Update Title
+    const year = currentDiaryDate.getFullYear();
+    const month = currentDiaryDate.getMonth() + 1;
+    const date = currentDiaryDate.getDate();
+    const day = ['일', '월', '화', '수', '목', '금', '토'][currentDiaryDate.getDay()];
+
+    diaryDateTitle.textContent = `${year}년 ${month}월 ${date}일 (${day})`;
+
+    // Clear previous content
+    diaryContentLayer.innerHTML = '';
+
+    // Load Decorations
+    const key = getDiaryKey(currentDiaryDate);
+    const dayData = diaryData[key] || { items: [], canvasData: null, background: 'lined', backgroundColor: '#fdfbf7' };
+
+    // Set Background
+    setDiaryBackground(dayData.background || 'lined', dayData.backgroundColor || '#fdfbf7');
+
+    // Load Canvas
+    if (dayData.canvasData) {
+        const img = new Image();
+        img.onload = () => {
+            ctx.clearRect(0, 0, diaryCanvas.width, diaryCanvas.height);
+            ctx.drawImage(img, 0, 0);
+        };
+        img.src = dayData.canvasData;
+    } else {
+        ctx.clearRect(0, 0, diaryCanvas.width, diaryCanvas.height);
+    }
+
+    // Load Items
+    const items = dayData.items || [];
+    items.forEach(item => {
+        createDiaryItemElement(item);
+    });
+}
+
+function setDiaryBackground(style, color) {
+    diaryBackgroundStyle = style;
+    diaryBackgroundColor = color;
+
+    diaryBackground.className = 'diary-background'; // Reset
+    diaryBackground.innerHTML = '';
+    diaryBackground.style.backgroundImage = '';
+    diaryBackground.style.backgroundColor = color; // Apply color
+
+    if (style === 'lined') {
+        diaryBackground.style.backgroundImage = 'linear-gradient(#e5e7eb 1px, transparent 1px)';
+        diaryBackground.style.backgroundSize = '100% 2.5rem';
+        diaryBackground.style.marginTop = '3rem';
+    } else if (style === 'lined-narrow') {
+        diaryBackground.style.backgroundImage = 'linear-gradient(#e5e7eb 1px, transparent 1px)';
+        diaryBackground.style.backgroundSize = '100% 1.5rem';
+        diaryBackground.style.marginTop = '3rem';
+    } else if (style === 'grid') {
+        diaryBackground.style.backgroundImage = 'linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px)';
+        diaryBackground.style.backgroundSize = '20px 20px';
+        diaryBackground.style.marginTop = '0';
+    } else if (style === 'dot') {
+        diaryBackground.style.backgroundImage = 'radial-gradient(#d1d5db 1px, transparent 1px)';
+        diaryBackground.style.backgroundSize = '20px 20px';
+        diaryBackground.style.marginTop = '0';
+    } else if (style === 'plain') {
+        diaryBackground.style.marginTop = '0';
+    }
+}
+
+function resizeCanvas() {
+    if (!diaryCanvas || !diaryPaper) return;
+    const rect = diaryPaper.getBoundingClientRect();
+    diaryCanvas.width = rect.width;
+    diaryCanvas.height = rect.height;
+}
+
+// Ensure canvas resizes with window
+window.addEventListener('resize', () => {
+    if (isDiaryMode) resizeCanvas();
+});
+
+function createDiaryItemElement(item) {
+    const el = document.createElement('div');
+    el.classList.add('diary-item');
+    el.style.position = 'absolute';
+    el.style.left = item.x + 'px';
+    el.style.top = item.y + 'px';
+    el.style.top = item.y + 'px';
+    el.style.cursor = 'move';
+    el.style.userSelect = 'none';
+    el.style.zIndex = item.zIndex || '10';
+    el.style.transform = `rotate(${item.rotation || 0}deg)`;
+
+    // Controls Wrapper
+    const controls = document.createElement('div');
+    controls.className = 'item-controls';
+
+    const resizeHandle = document.createElement('div');
+    resizeHandle.className = 'control-handle resize-handle';
+    controls.appendChild(resizeHandle);
+
+    const rotateHandle = document.createElement('div');
+    rotateHandle.className = 'control-handle rotate-handle';
+    controls.appendChild(rotateHandle);
+
+    const deleteHandle = document.createElement('div');
+    deleteHandle.className = 'control-handle delete-handle';
+    controls.appendChild(deleteHandle);
+
+    let textColorHandle = null;
+    if (item.type === 'text') {
+        textColorHandle = document.createElement('div');
+        textColorHandle.className = 'control-handle text-color-handle';
+        controls.appendChild(textColorHandle);
+    }
+
+    const layerUpHandle = document.createElement('div');
+    layerUpHandle.className = 'control-handle layer-up-handle';
+    controls.appendChild(layerUpHandle);
+
+    const layerDownHandle = document.createElement('div');
+    layerDownHandle.className = 'control-handle layer-down-handle';
+    controls.appendChild(layerDownHandle);
+
+    el.appendChild(controls);
+
+    // Content
+    const contentDiv = document.createElement('div');
+    contentDiv.style.pointerEvents = 'none'; // Clicks go to parent
+    contentDiv.style.width = '100%';
+    contentDiv.style.height = '100%';
+    contentDiv.style.display = 'flex';
+    contentDiv.style.alignItems = 'center';
+    contentDiv.style.justifyContent = 'center';
+
+    if (item.type === 'sticker') {
+        contentDiv.textContent = item.content;
+        // Scale font size based on width/height ratio or just use width
+        const size = item.width || 50;
+        contentDiv.style.fontSize = `${size}px`;
+        el.style.width = `${size}px`;
+        el.style.height = `${size}px`;
+    } else if (item.type === 'text') {
+        contentDiv.textContent = item.content;
+        const fontSize = item.fontSize || 40; // Increased from 20 to 40
+        contentDiv.style.fontSize = `${fontSize}px`;
+        contentDiv.style.color = item.color || '#374151';
+        contentDiv.style.fontFamily = item.fontFamily || "'Nanum Pen Script', cursive";
+        contentDiv.style.whiteSpace = 'nowrap';
+        // Auto width for text
+    } else if (item.type === 'photo') {
+        const img = document.createElement('img');
+        img.src = item.content;
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'contain';
+        img.style.borderRadius = '8px';
+        contentDiv.appendChild(img);
+        el.style.width = `${item.width || 150}px`;
+        el.style.height = `${item.height || 150}px`;
+    }
+
+    el.appendChild(contentDiv);
+
+    // Selection Logic
+    el.addEventListener('mousedown', (e) => {
+        // Deselect others
+        document.querySelectorAll('.diary-item').forEach(i => i.classList.remove('selected'));
+        el.classList.add('selected');
+        e.stopPropagation(); // Prevent canvas drawing
+    });
+
+    // Drag Logic
+    let isDragging = false;
+    let startX, startY, initialLeft, initialTop;
+
+    const onMouseDown = (e) => {
+        if (e.target.classList.contains('control-handle')) return;
+
+        isDragging = true;
+        startX = e.clientX || e.touches[0].clientX;
+        startY = e.clientY || e.touches[0].clientY;
+        initialLeft = parseFloat(el.style.left);
+        initialTop = parseFloat(el.style.top);
+        el.style.zIndex = '100'; // Bring to front
+    };
+
+    const onMouseMove = (e) => {
+        if (!isDragging) return;
+        const clientX = e.clientX || e.touches[0].clientX;
+        const clientY = e.clientY || e.touches[0].clientY;
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+
+        el.style.left = `${initialLeft + dx}px`;
+        el.style.top = `${initialTop + dy}px`;
+    };
+
+    const onMouseUp = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        el.style.zIndex = item.zIndex || '10'; // Restore original z-index or default
+
+        // Update Data
+        item.x = parseFloat(el.style.left);
+        item.y = parseFloat(el.style.top);
+        saveDiaryData();
+    };
+
+    el.addEventListener('mousedown', onMouseDown);
+    el.addEventListener('touchstart', onMouseDown, { passive: false });
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('touchmove', onMouseMove, { passive: false });
+
+    window.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('touchend', onMouseUp);
+
+    // Resize Logic
+    let isResizing = false;
+    let startResizeX, startResizeY, startWidth, startHeight, startFontSize;
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        startResizeX = e.clientX;
+        startResizeY = e.clientY;
+        startWidth = el.offsetWidth;
+        startHeight = el.offsetHeight;
+        if (item.type === 'text') startFontSize = item.fontSize || 40; // Match new default
+        e.stopPropagation();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        const dx = e.clientX - startResizeX;
+        const dy = e.clientY - startResizeY;
+
+        // Aspect Ratio Logic
+        // Use the larger delta to drive the size change to keep it square/proportional
+        const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+        const newSize = Math.max(20, startWidth + delta);
+
+        if (item.type === 'text') {
+            // Scale font size
+            const scaleRatio = newSize / startWidth;
+            const newFontSize = startFontSize * scaleRatio;
+            contentDiv.style.fontSize = `${newFontSize}px`;
+            item.fontSize = newFontSize;
+        } else {
+            // Enforce aspect ratio for sticker and photo
+            el.style.width = `${newSize}px`;
+            el.style.height = `${newSize}px`;
+            item.width = newSize;
+            item.height = newSize;
+
+            if (item.type === 'sticker') {
+                contentDiv.style.fontSize = `${newSize}px`;
+            }
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            saveDiaryData();
+        }
+    });
+
+    // Rotate Logic
+    let isRotating = false;
+    let startRotateX, startRotateY, startRotation;
+
+    rotateHandle.addEventListener('mousedown', (e) => {
+        isRotating = true;
+        const rect = el.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        startRotateX = e.clientX - centerX;
+        startRotateY = e.clientY - centerY;
+        startRotation = item.rotation || 0;
+        e.stopPropagation();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isRotating) return;
+        const rect = el.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const dx = e.clientX - centerX;
+        const dy = e.clientY - centerY;
+
+        const angle = Math.atan2(dy, dx);
+        const startAngle = Math.atan2(startRotateY, startRotateX);
+        const deg = (angle - startAngle) * (180 / Math.PI);
+
+        const newRotation = startRotation + deg;
+        el.style.transform = `rotate(${newRotation}deg)`;
+        item.rotation = newRotation;
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (isRotating) {
+            isRotating = false;
+            saveDiaryData();
+        }
+    });
+
+    // Delete Logic
+    deleteHandle.addEventListener('mousedown', (e) => {
+        e.stopPropagation(); // Prevent drag
+        if (confirm('삭제하시겠습니까?')) {
+            el.remove();
+            const key = getDiaryKey(currentDiaryDate);
+            if (diaryData[key] && diaryData[key].items) {
+                diaryData[key].items = diaryData[key].items.filter(i => i !== item);
+                saveDiaryData();
+            }
+        }
+    });
+
+    // Text Settings Logic (Color + Font)
+    if (textColorHandle) {
+        textColorHandle.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+
+            // Create mini modal for text settings
+            const settingsModal = document.createElement('div');
+            settingsModal.style.position = 'fixed';
+            settingsModal.style.top = '50%';
+            settingsModal.style.left = '50%';
+            settingsModal.style.transform = 'translate(-50%, -50%)';
+            settingsModal.style.background = 'rgba(255, 255, 255, 0.95)';
+            settingsModal.style.padding = '1.5rem';
+            settingsModal.style.borderRadius = '12px';
+            settingsModal.style.boxShadow = '0 10px 30px rgba(0,0,0,0.3)';
+            settingsModal.style.zIndex = '3000';
+            settingsModal.style.minWidth = '250px';
+
+            settingsModal.innerHTML = `
+                <h3 style="margin: 0 0 1rem 0; color: #374151;">Text Settings</h3>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: #6b7280;">Color</label>
+                    <input type="color" id="temp-text-color" value="${item.color || '#374151'}" style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid #ccc;">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: #6b7280;">Font</label>
+                    <select id="temp-text-font" style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid #ccc;">
+                        <option value="'Nanum Pen Script', cursive">Nanum Pen Script</option>
+                        <option value="'BMJUA', cursive">BMJUA</option>
+                        <option value="'Jua', sans-serif">Jua</option>
+                        <option value="'Roboto', sans-serif">Roboto</option>
+                        <option value="'Inter', sans-serif">Inter</option>
+                    </select>
+                </div>
+                <button id="temp-text-save" style="width: 100%; padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Apply</button>
+            `;
+
+            document.body.appendChild(settingsModal);
+
+            // Set current font
+            const fontSelect = document.getElementById('temp-text-font');
+            if (item.fontFamily) {
+                fontSelect.value = item.fontFamily;
+            }
+
+            // Save button
+            document.getElementById('temp-text-save').addEventListener('click', () => {
+                const newColor = document.getElementById('temp-text-color').value;
+                const newFont = fontSelect.value;
+
+                contentDiv.style.color = newColor;
+                contentDiv.style.fontFamily = newFont;
+
+                item.color = newColor;
+                item.fontFamily = newFont;
+
+                saveDiaryData();
+                settingsModal.remove();
+            });
+
+            // Close on click outside
+            const closeOverlay = document.createElement('div');
+            closeOverlay.style.position = 'fixed';
+            closeOverlay.style.top = '0';
+            closeOverlay.style.left = '0';
+            closeOverlay.style.width = '100%';
+            closeOverlay.style.height = '100%';
+            closeOverlay.style.zIndex = '2999';
+            closeOverlay.onclick = () => {
+                settingsModal.remove();
+                closeOverlay.remove();
+            };
+            document.body.appendChild(closeOverlay);
+        });
+    }
+
+    // Layer Logic
+    layerUpHandle.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        item.zIndex = (item.zIndex || 10) + 1;
+        el.style.zIndex = item.zIndex;
+        saveDiaryData();
+    });
+
+    layerDownHandle.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        item.zIndex = Math.max(1, (item.zIndex || 10) - 1);
+        el.style.zIndex = item.zIndex;
+        saveDiaryData();
+    });
+
+    // Double click to edit text (only for text items)
+    if (item.type === 'text') {
+        el.addEventListener('dblclick', () => {
+            const newText = prompt("텍스트 수정:", item.content);
+            if (newText !== null) {
+                item.content = newText;
+                contentDiv.textContent = newText;
+                saveDiaryData();
+            }
+        });
+    }
+
+    diaryContentLayer.appendChild(el);
+}
+
+// Settings Logic
+const btnSettingsConfirm = document.getElementById('btn-settings-confirm');
+const btnSettingsShare = document.getElementById('btn-settings-share');
+const diaryPreviewBg = document.getElementById('diary-preview-bg');
+
+if (btnDiarySettings) {
+    btnDiarySettings.addEventListener('click', () => {
+        // Load current settings
+        const key = getDiaryKey(currentDiaryDate);
+        const dayData = diaryData[key] || {};
+
+        const currentStyle = dayData.background || 'lined';
+        const currentColor = dayData.backgroundColor || '#fdfbf7';
+
+        diaryPaperType.value = currentStyle;
+        diaryPaperColor.value = currentColor;
+
+        updatePreview(currentStyle, currentColor);
+
+        diarySettingsModal.classList.remove('hidden');
+    });
+}
+
+function updatePreview(style, color) {
+    diaryPreviewBg.className = ''; // Reset
+    diaryPreviewBg.innerHTML = '';
+    diaryPreviewBg.style.backgroundImage = '';
+    diaryPreviewBg.style.backgroundColor = color;
+
+    if (style === 'lined') {
+        diaryPreviewBg.style.backgroundImage = 'linear-gradient(#e5e7eb 1px, transparent 1px)';
+        diaryPreviewBg.style.backgroundSize = '100% 2.5rem';
+    } else if (style === 'lined-narrow') {
+        diaryPreviewBg.style.backgroundImage = 'linear-gradient(#e5e7eb 1px, transparent 1px)';
+        diaryPreviewBg.style.backgroundSize = '100% 1.5rem';
+    } else if (style === 'grid') {
+        diaryPreviewBg.style.backgroundImage = 'linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px)';
+        diaryPreviewBg.style.backgroundSize = '20px 20px';
+    } else if (style === 'dot') {
+        diaryPreviewBg.style.backgroundImage = 'radial-gradient(#d1d5db 1px, transparent 1px)';
+        diaryPreviewBg.style.backgroundSize = '20px 20px';
+    } else if (style === 'plain') {
+        // No specific background image/pattern for plain
+    } else if (style === 'kraft') {
+        diaryPreviewBg.style.backgroundColor = '#d4c4a8';
+        diaryPreviewBg.style.backgroundImage = 'url("https://www.transparenttextures.com/patterns/paper.png")'; // Simple texture pattern if available, or just color
+    } else if (style === 'dark') {
+        diaryPreviewBg.style.backgroundColor = '#1f2937';
+        diaryPreviewBg.style.backgroundImage = 'linear-gradient(#374151 1px, transparent 1px)';
+        diaryPreviewBg.style.backgroundSize = '100% 2.5rem';
+    }
+}
+
+if (closeDiarySettings) {
+    closeDiarySettings.addEventListener('click', () => {
+        diarySettingsModal.classList.add('hidden');
+    });
+}
+
+if (diaryPaperType) {
+    diaryPaperType.addEventListener('change', (e) => {
+        updatePreview(e.target.value, diaryPaperColor.value);
+    });
+}
+
+if (diaryPaperColor) {
+    diaryPaperColor.addEventListener('input', (e) => {
+        updatePreview(diaryPaperType.value, e.target.value);
+    });
+}
+
+if (btnSettingsConfirm) {
+    btnSettingsConfirm.addEventListener('click', () => {
+        const type = diaryPaperType.value;
+        const color = diaryPaperColor.value;
+
+        setDiaryBackground(type, color);
+
+        const key = getDiaryKey(currentDiaryDate);
+        if (!diaryData[key]) diaryData[key] = { items: [], canvasData: null };
+        diaryData[key].background = type;
+        diaryData[key].backgroundColor = color;
+        saveDiaryData();
+
+        diarySettingsModal.classList.add('hidden');
+    });
+}
+
+if (btnSettingsShare) {
+    btnSettingsShare.addEventListener('click', async () => {
+        // Simple Canvas Export Logic
+        // 1. Create a temporary canvas
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = diaryCanvas.width;
+        exportCanvas.height = diaryCanvas.height;
+        const ctxExport = exportCanvas.getContext('2d');
+
+        // 2. Fill Background
+        const key = getDiaryKey(currentDiaryDate);
+        const dayData = diaryData[key] || {};
+        const bgColor = dayData.backgroundColor || '#fdfbf7';
+        ctxExport.fillStyle = bgColor;
+        ctxExport.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+        // Draw Pattern (Simplified for export)
+        const style = dayData.background || 'lined';
+        if (style === 'lined' || style === 'lined-narrow' || style === 'dark') {
+            ctxExport.strokeStyle = style === 'dark' ? '#374151' : '#e5e7eb';
+            ctxExport.lineWidth = 1;
+            const gap = style === 'lined-narrow' ? 24 : 40; // approx px for rem
+            for (let y = (style === 'dark' || style === 'lined' || style === 'lined-narrow') ? 48 : 0; y < exportCanvas.height; y += gap) {
+                ctxExport.beginPath();
+                ctxExport.moveTo(0, y);
+                ctxExport.lineTo(exportCanvas.width, y);
+                ctxExport.stroke();
+            }
+        } else if (style === 'grid') {
+            ctxExport.strokeStyle = '#e5e7eb';
+            ctxExport.lineWidth = 1;
+            const gridSize = 20;
+            for (let x = 0; x < exportCanvas.width; x += gridSize) {
+                ctxExport.beginPath();
+                ctxExport.moveTo(x, 0);
+                ctxExport.lineTo(x, exportCanvas.height);
+                ctxExport.stroke();
+            }
+            for (let y = 0; y < exportCanvas.height; y += gridSize) {
+                ctxExport.beginPath();
+                ctxExport.moveTo(0, y);
+                ctxExport.lineTo(exportCanvas.width, y);
+                ctxExport.stroke();
+            }
+        } else if (style === 'dot') {
+            ctxExport.fillStyle = '#d1d5db';
+            const dotSize = 1;
+            const dotSpacing = 20;
+            for (let x = 0; x < exportCanvas.width; x += dotSpacing) {
+                for (let y = 0; y < exportCanvas.height; y += dotSpacing) {
+                    ctxExport.beginPath();
+                    ctxExport.arc(x, y, dotSize, 0, Math.PI * 2);
+                    ctxExport.fill();
+                }
+            }
+        } else if (style === 'kraft') {
+            // For kraft, we'd ideally draw the texture. For simplicity, just the color.
+            // If a texture image is loaded, it could be drawn here.
+        }
+
+        // 3. Draw Drawing Canvas
+        ctxExport.drawImage(diaryCanvas, 0, 0);
+
+        // 4. Draw Items (Text, Images, Stickers)
+        // Note: This is tricky without html2canvas because we need to render DOM to Canvas.
+        // For now, we will try to use html2canvas if available, or fallback to a simple alert if not.
+        // Since we can't easily add libraries, we'll try to dynamically load it.
+
+        if (typeof html2canvas === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js';
+            script.onload = () => captureDiary();
+            document.head.appendChild(script);
+        } else {
+            captureDiary();
+        }
+    });
+}
+
+function captureDiary() {
+    const diaryPaper = document.getElementById('diary-paper');
+    // Temporarily hide handles for screenshot
+    document.body.classList.add('taking-screenshot');
+    const handles = document.querySelectorAll('.item-controls');
+    handles.forEach(h => h.style.display = 'none');
+
+    html2canvas(diaryPaper, {
+        scale: 2, // Better quality
+        backgroundColor: null,
+        useCORS: true // For images
+    }).then(canvas => {
+        // Restore handles
+        document.body.classList.remove('taking-screenshot');
+        handles.forEach(h => h.style.display = ''); // Reset to CSS control
+
+        canvas.toBlob(async (blob) => {
+            if (navigator.share) {
+                try {
+                    const file = new File([blob], `diary-${getDiaryKey(currentDiaryDate)}.png`, { type: 'image/png' });
+                    await navigator.share({
+                        files: [file],
+                        title: '나의 다이어리',
+                        text: '오늘의 다이어리를 공유합니다!'
+                    });
+                } catch (err) {
+                    console.error('Share failed', err);
+                    downloadImage(canvas);
+                }
+            } else {
+                downloadImage(canvas);
+            }
+        });
+    });
+}
+
+function downloadImage(canvas) {
+    const link = document.createElement('a');
+    link.download = `diary-${getDiaryKey(currentDiaryDate)}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
+}
+
+// Deselect on background click
+if (diaryPaper) {
+    diaryPaper.addEventListener('mousedown', (e) => {
+        if (e.target === diaryPaper || e.target === diaryContentLayer || e.target === diaryCanvas) {
+            document.querySelectorAll('.diary-item').forEach(i => i.classList.remove('selected'));
+        }
+    });
+}
+
+// Sticker Tool
+const toolSticker = document.getElementById('tool-sticker');
+if (toolSticker) {
+    toolSticker.addEventListener('click', () => {
+        // Expanded emoji categories
+        const emojiCategories = {
+            '표정': ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '😋', '😛', '😜', '🤪', '😝', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴'],
+            '감정': ['😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐', '😕', '😟', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱'],
+            '동물': ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈'],
+            '음식': ['🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🌽', '🥕', '🥗', '🍕', '🍔', '🍟', '🌭', '🥪', '🌮', '🌯', '🥙', '🍗', '🍖', '🦴', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜'],
+            '음료': ['☕', '🍵', '🧃', '🥤', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🍾', '🧊'],
+            '활동': ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🥅', '⛳', '⛸️', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛷', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '🤺', '⛹️', '🤾', '🏌️', '🧘', '🏄', '🏊', '🤽', '🚣', '🧗', '🚵', '🚴', '🏇', '🧑‍🎨', '🎨', '🎭', '🎪', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🎷', '🎺', '🎸', '🪕', '🎻', '🎲', '♟️', '🎯', '🎳', '🎮', '🎰'],
+            '여행': ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🚚', '🚛', '🚜', '🛴', '🚲', '🛵', '🏍️', '🛺', '🚨', '🚔', '🚍', '🚘', '🚖', '🚡', '🚠', '🚟', '🚃', '🚋', '🚞', '🚝', '🚄', '🚅', '🚈', '🚂', '🚆', '🚇', '🚊', '🚉', '✈️', '🛫', '🛬', '🛩️', '💺', '🛰️', '🚀', '🛸', '🚁', '🛶', '⛵', '🚤', '🛥️', '🛳️', '⛴️', '🚢', '⚓', '⛽', '🚧', '🚦', '🚥', '🗿', '🗽', '🗼', '🏰', '🏯', '🏟️', '🎡', '🎢', '🎠', '⛲', '⛱️', '🏖️', '🏝️', '🏜️', '🌋', '⛰️', '🏔️', '🗻', '🏕️', '⛺', '🏠', '🏡', '🏘️', '🏚️', '🏗️', '🏭', '🏢', '🏬', '🏣', '🏤', '🏥', '🏦', '🏨', '🏪', '🏫', '🏩', '💒', '🏛️', '⛪', '🕌', '🕍', '🛕', '🕋'],
+            '자연': ['🌱', '🌲', '🌳', '🌴', '🌵', '🌾', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃', '🌺', '🌻', '🌼', '🌷', '🌹', '🥀', '🏵️', '💐', '🌸', '💮', '🌌', '🌃', '🌍', '🌎', '🌏', '🌐', '🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘', '🌙', '🌚', '🌛', '🌜', '☀️', '🌝', '🌞', '⭐', '🌟', '✨', '⚡', '☄️', '💫', '🔥', '🌈', '☁️', '⛅', '⛈️', '🌤️', '🌥️', '🌦️', '🌧️', '🌨️', '🌩️', '🌪️', '🌫️', '🌬️', '💨', '💧', '💦', '☔', '☂️', '🌊', '🌀']
+        };
+
+        // Create picker modal
+        const picker = document.createElement('div');
+        picker.className = 'sticker-picker glass-container';
+        picker.style.position = 'fixed';
+        picker.style.top = '50%';
+        picker.style.left = '50%';
+        picker.style.transform = 'translate(-50%, -50%)';
+        picker.style.width = 'min(90%, 500px)';
+        picker.style.maxHeight = '70vh';
+        picker.style.overflowY = 'auto';
+        picker.style.padding = '1.5rem';
+        picker.style.zIndex = '3000';
+        picker.style.borderRadius = '16px';
+
+        // Close button
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '&times;';
+        closeBtn.style.position = 'absolute';
+        closeBtn.style.top = '10px';
+        closeBtn.style.right = '10px';
+        closeBtn.style.background = 'none';
+        closeBtn.style.border = 'none';
+        closeBtn.style.fontSize = '2rem';
+        closeBtn.style.cursor = 'pointer';
+        closeBtn.style.color = 'var(--text-color)';
+        closeBtn.style.lineHeight = '1';
+        closeBtn.style.padding = '0';
+        closeBtn.style.width = '32px';
+        closeBtn.style.height = '32px';
+        closeBtn.onclick = () => {
+            picker.remove();
+            closeOverlay.remove();
+        };
+        picker.appendChild(closeBtn);
+
+        // Title
+        const title = document.createElement('h3');
+        title.textContent = '이모티콘 선택';
+        title.style.marginTop = '0';
+        title.style.marginBottom = '1rem';
+        picker.appendChild(title);
+
+        // Create category sections
+        Object.entries(emojiCategories).forEach(([category, emojis]) => {
+            const categoryTitle = document.createElement('h4');
+            categoryTitle.textContent = category;
+            categoryTitle.style.marginTop = '1rem';
+            categoryTitle.style.marginBottom = '0.5rem';
+            categoryTitle.style.fontSize = '1rem';
+            picker.appendChild(categoryTitle);
+
+            const grid = document.createElement('div');
+            grid.style.display = 'grid';
+            grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(50px, 1fr))';
+            grid.style.gap = '8px';
+            grid.style.marginBottom = '1rem';
+
+            emojis.forEach(emoji => {
+                const btn = document.createElement('button');
+                btn.textContent = emoji;
+                btn.style.fontSize = '2rem';
+                btn.style.background = 'rgba(255, 255, 255, 0.1)';
+                btn.style.border = '1px solid rgba(255, 255, 255, 0.2)';
+                btn.style.borderRadius = '8px';
+                btn.style.cursor = 'pointer';
+                btn.style.padding = '0.5rem';
+                btn.style.transition = 'all 0.2s';
+                btn.onmouseover = () => {
+                    btn.style.background = 'rgba(255, 255, 255, 0.2)';
+                    btn.style.transform = 'scale(1.1)';
+                };
+                btn.onmouseout = () => {
+                    btn.style.background = 'rgba(255, 255, 255, 0.1)';
+                    btn.style.transform = 'scale(1)';
+                };
+                btn.onclick = () => {
+                    addSticker(emoji);
+                    picker.remove();
+                    closeOverlay.remove();
+                };
+                grid.appendChild(btn);
+            });
+
+            picker.appendChild(grid);
+        });
+
+        // Close overlay
+        const closeOverlay = document.createElement('div');
+        closeOverlay.style.position = 'fixed';
+        closeOverlay.style.top = '0';
+        closeOverlay.style.left = '0';
+        closeOverlay.style.width = '100%';
+        closeOverlay.style.height = '100%';
+        closeOverlay.style.background = 'rgba(0, 0, 0, 0.5)';
+        closeOverlay.style.zIndex = '2999';
+        closeOverlay.onclick = () => {
+            picker.remove();
+            closeOverlay.remove();
+        };
+
+        // Append to diary section instead of body
+        const diarySection = document.getElementById('diary-section');
+        diarySection.appendChild(closeOverlay);
+        diarySection.appendChild(picker);
+    });
+}
+
+function addSticker(content) {
+    const newItem = {
+        type: 'sticker',
+        content: content,
+        x: 100,
+        y: 100,
+        width: 50,  // Default size
+        height: 50, // Default size
+        rotation: 0
+    };
+
+    const key = getDiaryKey(currentDiaryDate);
+    if (!diaryData[key]) diaryData[key] = { items: [], canvasData: null, background: 'lined' };
+    diaryData[key].items.push(newItem);
+
+    createDiaryItemElement(newItem);
+    saveDiaryData();
+}
+
+// Text Tool
+const toolText = document.getElementById('tool-text');
+if (toolText) {
+    toolText.addEventListener('click', () => {
+        const text = prompt("추가할 텍스트를 입력하세요:", "오늘의 기분은...");
+        if (text) {
+            addText(text);
+        }
+    });
+}
+
+function addText(content) {
+    const newItem = {
+        type: 'text',
+        content: content,
+        x: 100,
+        y: 150,
+        fontSize: 40, // Increased default size
+        rotation: 0
+    };
+
+    const key = getDiaryKey(currentDiaryDate);
+    if (!diaryData[key]) diaryData[key] = { items: [], canvasData: null, background: 'lined' };
+    diaryData[key].items.push(newItem);
+
+    createDiaryItemElement(newItem);
+    saveDiaryData();
+}
+
+// --- New Tools Implementation ---
+
+// 1. Pen Tool
+if (toolPen) {
+    toolPen.addEventListener('click', () => {
+        isPenActive = !isPenActive;
+        if (isPenActive) {
+            toolPen.classList.add('active');
+            diaryCanvas.style.pointerEvents = 'auto'; // Enable drawing
+            penSettings.classList.remove('hidden');
+            // Disable other interactions if needed
+        } else {
+            toolPen.classList.remove('active');
+            diaryCanvas.style.pointerEvents = 'none';
+            penSettings.classList.add('hidden');
+        }
+    });
+}
+
+// Pen Settings
+if (penColorInput) {
+    penColorInput.addEventListener('change', (e) => {
+        penColor = e.target.value;
+        isEraserActive = false;
+        toolEraser.classList.remove('active');
+    });
+}
+
+if (penWidthInput) {
+    penWidthInput.addEventListener('input', (e) => {
+        penWidth = e.target.value;
+    });
+}
+
+if (toolEraser) {
+    toolEraser.addEventListener('click', () => {
+        isEraserActive = !isEraserActive;
+        if (isEraserActive) {
+            toolEraser.classList.add('active');
+        } else {
+            toolEraser.classList.remove('active');
+        }
+    });
+}
+
+// Drawing Logic
+let isDrawing = false;
+let lastX = 0;
+let lastY = 0;
+
+function startDrawing(e) {
+    if (!isPenActive) return;
+    isDrawing = true;
+    const rect = diaryCanvas.getBoundingClientRect();
+    const clientX = e.clientX || e.touches[0].clientX;
+    const clientY = e.clientY || e.touches[0].clientY;
+    lastX = clientX - rect.left;
+    lastY = clientY - rect.top;
+}
+
+function draw(e) {
+    if (!isDrawing || !isPenActive) return;
+    e.preventDefault(); // Prevent scrolling
+
+    const rect = diaryCanvas.getBoundingClientRect();
+    const clientX = e.clientX || e.touches[0].clientX;
+    const clientY = e.clientY || e.touches[0].clientY;
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(x, y);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (isEraserActive) {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.lineWidth = penWidth * 5; // Eraser is bigger
+    } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = penColor;
+        ctx.lineWidth = penWidth;
+    }
+
+    ctx.stroke();
+
+    lastX = x;
+    lastY = y;
+}
+
+function stopDrawing() {
+    if (!isDrawing) return;
+    isDrawing = false;
+    saveCanvasData();
+}
+
+if (diaryCanvas) {
+    diaryCanvas.addEventListener('mousedown', startDrawing);
+    diaryCanvas.addEventListener('mousemove', draw);
+    diaryCanvas.addEventListener('mouseup', stopDrawing);
+    diaryCanvas.addEventListener('mouseout', stopDrawing);
+
+    diaryCanvas.addEventListener('touchstart', startDrawing, { passive: false });
+    diaryCanvas.addEventListener('touchmove', draw, { passive: false });
+    diaryCanvas.addEventListener('touchend', stopDrawing);
+}
+
+function saveCanvasData() {
+    const dataURL = diaryCanvas.toDataURL();
+    const key = getDiaryKey(currentDiaryDate);
+    if (!diaryData[key]) diaryData[key] = { items: [], canvasData: null, background: 'lined' };
+    diaryData[key].canvasData = dataURL;
+    saveDiaryData();
+}
+
+// 2. Photo Tool
+if (toolPhoto) {
+    toolPhoto.addEventListener('click', () => {
+        photoInput.click();
+    });
+}
+
+if (photoInput) {
+    photoInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                addPhoto(event.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+        // Reset input
+        photoInput.value = '';
+    });
+}
+
+function addPhoto(dataURL) {
+    const newItem = {
+        type: 'photo',
+        content: dataURL,
+        x: 50,
+        y: 50,
+        width: 150,
+        height: 150,
+        rotation: 0
+    };
+
+    const key = getDiaryKey(currentDiaryDate);
+    if (!diaryData[key]) diaryData[key] = { items: [], canvasData: null, background: 'lined' };
+    diaryData[key].items.push(newItem);
+
+    createDiaryItemElement(newItem);
+    saveDiaryData();
+}
+
+// Diary Navigation
+if (diaryPrevDay) {
+    diaryPrevDay.addEventListener('click', () => {
+        currentDiaryDate.setDate(currentDiaryDate.getDate() - 1);
+        renderDiary();
+    });
+}
+
+if (diaryNextDay) {
+    diaryNextDay.addEventListener('click', () => {
+        currentDiaryDate.setDate(currentDiaryDate.getDate() + 1);
+        renderDiary();
+    });
+}
 
 // Google API Loaders
 function gapiLoaded() {
