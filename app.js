@@ -766,23 +766,30 @@ function createDiaryItemElement(item) {
     let isResizing = false;
     let startResizeX, startResizeY, startWidth, startHeight, startFontSize;
 
-    resizeHandle.addEventListener('mousedown', (e) => {
+    const startResize = (e) => {
         isResizing = true;
-        startResizeX = e.clientX;
-        startResizeY = e.clientY;
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        startResizeX = clientX;
+        startResizeY = clientY;
         startWidth = el.offsetWidth;
         startHeight = el.offsetHeight;
-        if (item.type === 'text') startFontSize = item.fontSize || 40; // Match new default
+        if (item.type === 'text') startFontSize = item.fontSize || 40;
         e.stopPropagation();
-    });
+        e.preventDefault();
+    };
 
-    window.addEventListener('mousemove', (e) => {
+    resizeHandle.addEventListener('mousedown', startResize);
+    resizeHandle.addEventListener('touchstart', startResize);
+
+    const handleResizeMove = (e) => {
         if (!isResizing) return;
-        const dx = e.clientX - startResizeX;
-        const dy = e.clientY - startResizeY;
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        const dx = clientX - startResizeX;
+        const dy = clientY - startResizeY;
 
         // Aspect Ratio Logic
-        // Use the larger delta to drive the size change to keep it square/proportional
         const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
         const newSize = Math.max(20, startWidth + delta);
 
@@ -803,37 +810,51 @@ function createDiaryItemElement(item) {
                 contentDiv.style.fontSize = `${newSize}px`;
             }
         }
-    });
+    };
 
-    window.addEventListener('mouseup', () => {
+    window.addEventListener('mousemove', handleResizeMove);
+    window.addEventListener('touchmove', handleResizeMove, { passive: false });
+
+    const endResize = () => {
         if (isResizing) {
             isResizing = false;
             saveDiaryData();
         }
-    });
+    };
+
+    window.addEventListener('mouseup', endResize);
+    window.addEventListener('touchend', endResize);
 
     // Rotate Logic
     let isRotating = false;
     let startRotateX, startRotateY, startRotation;
 
-    rotateHandle.addEventListener('mousedown', (e) => {
+    const startRotate = (e) => {
         isRotating = true;
         const rect = el.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
-        startRotateX = e.clientX - centerX;
-        startRotateY = e.clientY - centerY;
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        startRotateX = clientX - centerX;
+        startRotateY = clientY - centerY;
         startRotation = item.rotation || 0;
         e.stopPropagation();
-    });
+        e.preventDefault();
+    };
 
-    window.addEventListener('mousemove', (e) => {
+    rotateHandle.addEventListener('mousedown', startRotate);
+    rotateHandle.addEventListener('touchstart', startRotate);
+
+    const handleRotateMove = (e) => {
         if (!isRotating) return;
         const rect = el.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
-        const dx = e.clientX - centerX;
-        const dy = e.clientY - centerY;
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        const dx = clientX - centerX;
+        const dy = clientY - centerY;
 
         const angle = Math.atan2(dy, dx);
         const startAngle = Math.atan2(startRotateY, startRotateX);
@@ -842,14 +863,20 @@ function createDiaryItemElement(item) {
         const newRotation = startRotation + deg;
         el.style.transform = `rotate(${newRotation}deg)`;
         item.rotation = newRotation;
-    });
+    };
 
-    window.addEventListener('mouseup', () => {
+    window.addEventListener('mousemove', handleRotateMove);
+    window.addEventListener('touchmove', handleRotateMove, { passive: false });
+
+    const endRotate = () => {
         if (isRotating) {
             isRotating = false;
             saveDiaryData();
         }
-    });
+    };
+
+    window.addEventListener('mouseup', endRotate);
+    window.addEventListener('touchend', endRotate);
 
     // Delete Logic
     deleteHandle.addEventListener('mousedown', (e) => {
@@ -1154,19 +1181,27 @@ function captureDiary() {
         handles.forEach(h => h.style.display = ''); // Reset to CSS control
 
         canvas.toBlob(async (blob) => {
-            if (navigator.share) {
-                try {
+            try {
+                // Try to copy to clipboard first
+                if (navigator.clipboard && window.ClipboardItem) {
+                    const item = new ClipboardItem({ 'image/png': blob });
+                    await navigator.clipboard.write([item]);
+                    alert('다이어리가 클립보드에 복사되었습니다! 이제 원하는 곳에 붙여넣기 할 수 있습니다.');
+                } else if (navigator.share) {
+                    // Fallback to Web Share API on mobile
                     const file = new File([blob], `diary-${getDiaryKey(currentDiaryDate)}.png`, { type: 'image/png' });
                     await navigator.share({
                         files: [file],
                         title: '나의 다이어리',
                         text: '오늘의 다이어리를 공유합니다!'
                     });
-                } catch (err) {
-                    console.error('Share failed', err);
+                } else {
+                    // Last resort: download
                     downloadImage(canvas);
                 }
-            } else {
+            } catch (err) {
+                console.error('Copy/Share failed', err);
+                alert('공유에 실패했습니다. 다운로드로 대체합니다.');
                 downloadImage(canvas);
             }
         });
